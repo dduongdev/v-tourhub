@@ -1,0 +1,23 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: integration-service
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  cloud:
+    consul:
+      host: ${SPRING_CLOUD_CONSUL_HOST:localhost}
+      port: ${SPRING_CLOUD_CONSUL_PORT:8500}
+      discovery:
+        prefer-ip-address: true
+        instance-id: ${spring.application.name}:${random.value}
+        health-check-interval: 10s
+        health-check-timeout: 5s
+        health-check-critical-timeout: 30s 
+        deregister: true

@@ -1,0 +1,39 @@
+docs/
+.env
+
+# --- JAVA & MAVEN ---
+target/
+**/target/
+*.jar
+*.war
+*.ear
+*.class
+.mvn/
+mvnw
+mvnw.cmd
+
+# --- IDE (IntelliJ / Eclipse / VSCode) ---
+.idea/
+*.iml
+.vscode/
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# --- DOCKER VOLUMES (Data sinh ra khi chạy container) ---
+mysql_data/
+redis_data/
+rabbitmq_data/
+consul_data/
+minio_data/
+init-db/dump/
+
+# --- OS FILES ---
+.DS_Store
+Thumbs.db
+
+# --- LOGS ---
+*.log
+logs/

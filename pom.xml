@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.soa</groupId>
+    <artifactId>v-tourhub</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging> 
+
+    <name>Vietnam Tourism SOA</name>
+    <description>Hệ thống quản lý du lịch Việt Nam Microservices</description>
+
+    <!-- Danh sách các modules con -->
+    <modules>
+        <!-- 1. Shared Library -->
+        <module>soa-common</module>
+        
+        <!-- 2. Gateway -->
+        <module>api-gateway</module>
+        
+        <!-- 3. Core Business Services -->
+        <module>catalog-service</module>
+        <module>booking-service</module>
+        <module>provider-service</module>
+        <module>payment-service</module>
+        <module>review-service</module>
+        
+        <!-- 4. Support Services -->
+        <module>userprofile-service</module>
+        <module>notification-service</module>
+        <module>analytics-service</module>
+        <module>integration-service</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- Version Management -->
+        <spring-boot.version>3.2.0</spring-boot.version>
+        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <org.projectlombok.version>1.18.30</org.projectlombok.version>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
+    </properties>
+
+    <!-- Quản lý version tập trung (Bill of Materials - BOM) -->
+    <!-- Các module con sẽ KHÔNG cần khai báo version nữa -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- 1. Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- 2. Spring Cloud BOM (Tương thích với Boot 3.2.x) -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- 3. Module nội bộ (Shared Kernel) -->
+            <dependency>
+                <groupId>com.soa</groupId>
+                <artifactId>soa-common</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- Dependencies dùng chung cho TẤT CẢ modules -->
+    <dependencies>
+        <!-- Lombok (Giảm boilerplate code) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${org.projectlombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+        
+        <!-- Testing Basic -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Plugin build Spring Boot Jar -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- Plugin compiler -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${org.projectlombok.version}</version>
+                            </path>
+                            <!-- Nếu sau này dùng MapStruct thì thêm vào đây -->
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>
