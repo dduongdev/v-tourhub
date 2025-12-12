@@ -148,4 +148,20 @@ public class BookingService {
                 .build();
     }
 
+    @Transactional
+    public void completeBooking(Long bookingId, String transactionId) {
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            
+            log.info("Booking {} CONFIRMED via Payment Transaction: {}", bookingId, transactionId);
+            
+            bookingRepo.save(booking);
+            
+        } else {
+            log.warn("Ignored payment completion for Booking {} because status is {}", bookingId, booking.getStatus());
+        }
+    }
 }

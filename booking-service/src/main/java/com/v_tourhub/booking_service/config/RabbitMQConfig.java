@@ -16,6 +16,9 @@ public class RabbitMQConfig {
     public static final String QUEUE_CANCELLED = "booking.cancelled.queue"; 
     public static final String ROUTING_KEY_CANCELLED = "booking.cancelled";
 
+    public static final String QUEUE_PAYMENT_COMPLETED = "payment.completed.queue";
+    public static final String ROUTING_KEY_PAYMENT_COMPLETED = "payment.completed";
+
     @Bean
     public TopicExchange bookingExchange() {
         return new TopicExchange(EXCHANGE);
@@ -44,5 +47,15 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingCancelled(Queue cancelledQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(cancelledQueue).to(bookingExchange).with(ROUTING_KEY_CANCELLED);
+    }
+
+    @Bean
+    public Queue paymentCompletedQueue() {
+        return new Queue(QUEUE_PAYMENT_COMPLETED, true);
+    }
+
+    @Bean
+    public Binding bindingPaymentCompleted(Queue paymentCompletedQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(paymentCompletedQueue).to(bookingExchange).with(ROUTING_KEY_PAYMENT_COMPLETED);
     }
 }
