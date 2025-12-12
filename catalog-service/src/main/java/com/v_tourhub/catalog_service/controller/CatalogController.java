@@ -1,9 +1,12 @@
 package com.v_tourhub.catalog_service.controller;
 
 import com.soa.common.dto.ApiResponse;
+import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
+import com.v_tourhub.catalog_service.dto.TourismServiceResponse;
 import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.TourismService;
+import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.service.CatalogService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ import java.util.Map;
 public class CatalogController {
 
     private final CatalogService service;
+    private final ServiceMapper serviceMapper;
 
     @GetMapping("/destinations")
     public ApiResponse<Page<Destination>> getDestinations(
@@ -90,5 +94,24 @@ public class CatalogController {
         Sort sorting = direction.equalsIgnoreCase("desc") ? Sort.by(sort).descending() : Sort.by(sort).ascending();
         
         return ApiResponse.success(service.searchDestinations(q, filters, PageRequest.of(page, size, sorting)));
+    }
+
+    @GetMapping("/services/detail/{id}")
+    public ApiResponse<TourismServiceResponse> getServiceDetail(@PathVariable Long id) {
+        TourismService serviceEntity = service.getServiceById(id);
+        return ApiResponse.success(serviceMapper.toResponse(serviceEntity));
+    }
+
+    @PostMapping("/destinations/{id}/services")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')") 
+    public ApiResponse<TourismServiceResponse> createService(
+            @PathVariable Long id, 
+            @RequestBody CreateServiceRequest request) {
+        
+        TourismService entity = serviceMapper.toEntity(request);
+        
+        TourismService savedEntity = service.createService(id, entity);
+        
+        return ApiResponse.success(serviceMapper.toResponse(savedEntity));
     }
 }
