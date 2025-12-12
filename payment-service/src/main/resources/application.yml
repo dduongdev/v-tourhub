@@ -10,6 +10,15 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
     
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
@@ -28,3 +37,18 @@ spring:
         health-check-timeout: 5s
         health-check-critical-timeout: 30s 
         deregister: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:http://localhost:8080/realms/v-tourhub/protocol/openid-connect/certs}
+
+vnpay:
+  tmn-code: "4Z1WQVQZ"
+  hash-secret: "THMIHQBNIC5WUOZV9L7GEKU31QHE9527" 
+  url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+  return-url: "http://localhost:8000/api/payments/vnpay-return"
+  version: "2.1.0"
+  command: "pay"
+  order-type: "other"

@@ -17,6 +17,7 @@ public class PaymentEventListener {
 
     private final BookingService bookingService;
 
+    // --- CASE 1: THANH TOÁN THÀNH CÔNG ---
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_COMPLETED)
     public void handlePaymentCompleted(Map<String, Object> event) {
         log.info("Received Payment Completed Event: {}", event);
@@ -27,7 +28,22 @@ public class PaymentEventListener {
             bookingService.completeBooking(bookingId, transactionId);
 
         } catch (Exception e) {
-            log.error("Error processing payment event", e);
+            log.error("Error processing payment completed event", e);
+        }
+    }
+
+    // --- CASE 2: THANH TOÁN THẤT BẠI ---
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_FAILED)
+    public void handlePaymentFailed(Map<String, Object> event) {
+        log.info("Received Payment Failed Event: {}", event);
+        try {
+            Long bookingId = Long.valueOf(event.get("bookingId").toString());
+            String reason = (String) event.getOrDefault("status", "Unknown Error");
+
+            bookingService.handlePaymentFailure(bookingId, reason);
+
+        } catch (Exception e) {
+            log.error("Error processing payment failed event", e);
         }
     }
 }
