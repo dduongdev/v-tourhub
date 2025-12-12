@@ -2,6 +2,7 @@ package com.v_tourhub.booking_service.service;
 
 import com.soa.common.dto.ApiResponse;
 import com.v_tourhub.booking_service.client.CatalogClient;
+import com.v_tourhub.booking_service.config.RabbitMQConfig;
 import com.v_tourhub.booking_service.dto.BookingResponse;
 import com.v_tourhub.booking_service.dto.CatalogServiceDto;
 import com.v_tourhub.booking_service.dto.CreateBookingRequest;
@@ -148,6 +149,9 @@ public class BookingService {
                 .build();
     }
 
+    // =========================================================================
+    // 4. SAGA STEP: PAYMENT SUCCESS
+    // =========================================================================
     @Transactional
     public void completeBooking(Long bookingId, String transactionId) {
         Booking booking = bookingRepo.findById(bookingId)
@@ -156,12 +160,57 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             booking.setStatus(BookingStatus.CONFIRMED);
             
-            log.info("Booking {} CONFIRMED via Payment Transaction: {}", bookingId, transactionId);
+            log.info("Booking {} CONFIRMED. Transaction: {}", bookingId, transactionId);
             
             bookingRepo.save(booking);
             
+            publishConfirmedEvent(booking);
         } else {
             log.warn("Ignored payment completion for Booking {} because status is {}", bookingId, booking.getStatus());
+        }
+    }
+
+     private void publishConfirmedEvent(Booking booking) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("bookingId", booking.getId());
+        event.put("userId", booking.getUserId());
+        event.put("serviceId", booking.getServiceId());
+        event.put("providerId", booking.getProviderId());
+        event.put("checkIn", booking.getCheckInDate().toString());
+        event.put("checkOut", booking.getCheckOutDate().toString());
+        event.put("guests", booking.getGuests());
+        
+        event.put("customerEmail", booking.getCustomerEmail());
+        event.put("customerName", booking.getCustomerName());
+        
+        rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, RabbitMQConfig.ROUTING_KEY_CONFIRMED, event);
+        log.info("Published booking.confirmed event for Booking {}", booking.getId());
+    }
+
+    // =========================================================================
+    // 5. SAGA STEP: PAYMENT FAILED (Compensating Transaction)
+    // =========================================================================
+    @Transactional
+    public void handlePaymentFailure(Long bookingId, String reason) {
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            log.warn("Payment FAILED for Booking {}. Reason: {}. Cancelling booking...", bookingId, reason);
+            
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepo.save(booking);
+
+            Map<String, Object> event = new HashMap<>();
+            event.put("bookingId", bookingId);
+            event.put("serviceId", booking.getServiceId());
+            event.put("reason", "Payment Failed: " + reason);
+            event.put("inventoryLockToken", booking.getInventoryLockToken()); 
+            
+            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
+            log.info("Sent booking.cancelled event for Booking {}", bookingId);
+        } else {
+            log.info("Booking {} payment failed but status is already {}. Skipping.", bookingId, booking.getStatus());
         }
     }
 }

@@ -19,6 +19,11 @@ public class RabbitMQConfig {
     public static final String QUEUE_PAYMENT_COMPLETED = "payment.completed.queue";
     public static final String ROUTING_KEY_PAYMENT_COMPLETED = "payment.completed";
 
+    public static final String QUEUE_PAYMENT_FAILED = "payment.failed.queue";
+    public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
+
+    public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed"; 
+
     @Bean
     public TopicExchange bookingExchange() {
         return new TopicExchange(EXCHANGE);
@@ -57,5 +62,15 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingPaymentCompleted(Queue paymentCompletedQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(paymentCompletedQueue).to(bookingExchange).with(ROUTING_KEY_PAYMENT_COMPLETED);
+    }
+
+     @Bean
+    public Queue paymentFailedQueue() {
+        return new Queue(QUEUE_PAYMENT_FAILED, true);
+    }
+
+    @Bean
+    public Binding bindingPaymentFailed(Queue paymentFailedQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(paymentFailedQueue).to(bookingExchange).with(ROUTING_KEY_PAYMENT_FAILED);
     }
 }

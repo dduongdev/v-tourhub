@@ -21,6 +21,7 @@ public class SecurityConfig {
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
                 .pathMatchers(HttpMethod.GET, "/api/reviews/**").permitAll() 
+                .pathMatchers("/api/payments/vnpay-return").permitAll()
                 .pathMatchers("/actuator/**").permitAll()
                 
                 .anyExchange().authenticated()
