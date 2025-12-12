@@ -138,4 +138,20 @@ public class CatalogService {
 
         destRepo.save(dest);
     }
+
+    public TourismService getServiceById(Long id) {
+        return serviceRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+    }
+
+    @Transactional
+    @CacheEvict(value = "destinations", key = "#destinationId") 
+    public TourismService createService(Long destinationId, TourismService service) {
+        Destination dest = destRepo.findById(destinationId)
+                .orElseThrow(() -> new RuntimeException("Destination not found with id: " + destinationId));
+        
+        service.setDestination(dest);
+        
+        return serviceRepo.save(service);
+    }
 }

@@ -220,7 +220,13 @@ services:
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-    depends_on: [mysql, consul, redis]
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=admin
+      - SPRING_RABBITMQ_PASSWORD=admin123
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/v-tourhub
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/v-tourhub/protocol/openid-connect/certs
+    depends_on: [mysql, consul, redis, keycloak]
     networks: [soa-network]
 
   # 4. BOOKING SERVICE
@@ -242,7 +248,9 @@ services:
       - SPRING_RABBITMQ_PASSWORD=admin123
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-    depends_on: [mysql, consul, rabbitmq, redis]
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/v-tourhub
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/v-tourhub/protocol/openid-connect/certs
+    depends_on: [mysql, consul, rabbitmq, redis, keycloak]
     networks: [soa-network]
 
   # 5. PROVIDER SERVICE
@@ -297,7 +305,7 @@ services:
     container_name: soa-payment
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/catalog_db
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db
       - SPRING_CLOUD_CONSUL_HOST=consul
       - STRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATASOURCE_USERNAME=soa_user
