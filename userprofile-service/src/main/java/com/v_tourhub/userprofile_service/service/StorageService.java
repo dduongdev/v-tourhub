@@ -1,7 +1,6 @@
 package com.v_tourhub.userprofile_service.service;
 
 import io.minio.*;
-import io.minio.http.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -21,12 +19,27 @@ public class StorageService {
     @Value("${minio.bucket}")
     private String bucketName;
 
+    @Value("${minio.external-url}")
+    private String externalUrl;
+
     public String uploadFile(MultipartFile file) {
         try {
             boolean found = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucketName).build());
             if (!found) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());
-                String policy = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::" + bucketName + "/*\"]}]}";
+                String policy = """
+                        {
+                          "Version": "2012-10-17",
+                          "Statement": [
+                            {
+                              "Effect": "Allow",
+                              "Principal": {"AWS": ["*"]},
+                              "Action": ["s3:GetObject"],
+                              "Resource": ["arn:aws:s3:::%s/*"]
+                            }
+                          ]
+                        }
+                        """.formatted(bucketName);
                 minioClient.setBucketPolicy(SetBucketPolicyArgs.builder().bucket(bucketName).config(policy).build());
                 log.info("Created bucket: {}", bucketName);
             }
@@ -50,16 +63,6 @@ public class StorageService {
     }
     
     public String getFileUrl(String fileName) {
-        try {
-            return minioClient.getPresignedObjectUrl(
-                    GetPresignedObjectUrlArgs.builder()
-                            .method(Method.GET)
-                            .bucket(bucketName)
-                            .object(fileName)
-                            .expiry(7, TimeUnit.DAYS)
-                            .build());
-        } catch (Exception e) {
-            return null;
-        }
+        return String.format("%s/%s/%s", externalUrl, bucketName, fileName);
     }
 }
