@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.userprofile_service.entity.UserProfile;
 import com.v_tourhub.userprofile_service.repository.UserProfileRepository;
 
@@ -30,7 +31,7 @@ public class UserProfileService {
 
     public UserProfile updateProfile(String userId, UserProfile request) {
         UserProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         
         profile.setBio(request.getBio());
         profile.setPhone(request.getPhone());
@@ -44,7 +45,7 @@ public class UserProfileService {
     @Transactional
     public String uploadAvatar(String userId, MultipartFile file) {
         UserProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         
         String fileName = storageService.uploadFile(file);
         
@@ -56,7 +57,7 @@ public class UserProfileService {
     
     public UserProfile getProfileWithAvatar(String userId) {
         UserProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         if (profile.getAvatarUrl() != null && !profile.getAvatarUrl().startsWith("http")) {
             profile.setAvatarUrl(storageService.getFileUrl(profile.getAvatarUrl()));

@@ -7,6 +7,9 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nimbusds.jose.util.Resource;
+import com.soa.common.exception.BusinessException;
+import com.soa.common.exception.ResourceNotFoundException;
 import com.soa.payment_service.config.RabbitMQConfig;
 import com.soa.payment_service.config.VNPayConfig;
 import com.soa.payment_service.entity.Payment;
@@ -47,10 +50,10 @@ public class PaymentService {
 
     public String createVnPayUrl(Long bookingId, HttpServletRequest request) {
         Payment payment = paymentRepo.findByBookingId(bookingId)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
-            throw new RuntimeException("Booking already paid");
+            throw new BusinessException("Booking already paid");
         }
 
         long amount = payment.getAmount().longValue() * 100;
@@ -123,12 +126,11 @@ public class PaymentService {
         if (vnp_SecureHash == null || !verifySignature(queryParams, vnp_SecureHash)) {
             log.error("Checksum verification failed for booking {}", bookingId);
             handlePaymentFailed(Long.valueOf(bookingId), "Invalid Checksum");
-            throw new RuntimeException("Invalid Checksum");
+            throw new BusinessException("Invalid Checksum");
         }
 
         Payment payment = paymentRepo.findByBookingId(Long.valueOf(bookingId))
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
-
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
         if (payment.getStatus() == PaymentStatus.COMPLETED || payment.getStatus() == PaymentStatus.FAILED) {
             return payment;
         }

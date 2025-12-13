@@ -1,5 +1,6 @@
 package com.v_tourhub.catalog_service.service;
 
+import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.Location;
@@ -35,7 +36,7 @@ public class CatalogService {
     @Cacheable(value = "destinations", key = "#id")
     public Destination getDestinationById(Long id) {
         return destRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Destination not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Destination not found"));
     }
 
     @Transactional
@@ -131,7 +132,7 @@ public class CatalogService {
     @CacheEvict(value = "destinations", key = "#id")
     public void updateRating(Long id, Double newRating, Integer totalReviews) {
         Destination dest = destRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Destination not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Destination not found with id: " + id));
 
         dest.setAverageRating(newRating);
         dest.setTotalReviews(totalReviews);
@@ -141,14 +142,14 @@ public class CatalogService {
 
     public TourismService getServiceById(Long id) {
         return serviceRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
     }
 
     @Transactional
     @CacheEvict(value = "destinations", key = "#destinationId") 
     public TourismService createService(Long destinationId, TourismService service) {
         Destination dest = destRepo.findById(destinationId)
-                .orElseThrow(() -> new RuntimeException("Destination not found with id: " + destinationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Destination not found with id: " + destinationId));
         
         service.setDestination(dest);
         
