@@ -147,6 +147,15 @@ services:
     networks:
       - soa-network
 
+  maildev:
+    image: maildev/maildev
+    container_name: soa-maildev
+    ports:
+      - "1080:1080" # Web UI (Truy cập localhost:1080 để xem mail)
+      - "1025:1025" # SMTP Port
+    networks:
+      - soa-network
+
 
     # ============================================================
   # MICROSERVICES APPLICATION
@@ -400,12 +409,16 @@ services:
       - SPRING_RABBITMQ_USERNAME=admin
       - SPRING_RABBITMQ_PASSWORD=admin123
       - TZ=Asia/Ho_Chi_Minh
+      - SPRING_MAIL_HOST=maildev
+      - SPRING_MAIL_PORT=1025
     depends_on: 
       mysql:
         condition: service_healthy
       consul:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      maildev:
         condition: service_healthy
     networks: [soa-network]
 

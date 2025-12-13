@@ -28,8 +28,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
                     return exchange.mutate().request(request).build();
                 })
-                .defaultIfEmpty(exchange)
-                .flatMap(chain::filter);
+                // .defaultIfEmpty(exchange)
+                .flatMap(chain::filter)
+                .switchIfEmpty(chain.filter(exchange));
     }
 
     @Override
