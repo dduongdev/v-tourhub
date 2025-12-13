@@ -181,6 +181,7 @@ public class BookingService {
         event.put("checkIn", booking.getCheckInDate().toString());
         event.put("checkOut", booking.getCheckOutDate().toString());
         event.put("guests", booking.getGuests());
+        event.put("serviceName", booking.getServiceName());
         
         event.put("customerEmail", booking.getCustomerEmail());
         event.put("customerName", booking.getCustomerName());
