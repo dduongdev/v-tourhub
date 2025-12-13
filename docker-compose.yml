@@ -237,6 +237,10 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/v-tourhub
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/v-tourhub/protocol/openid-connect/certs
       - TZ=Asia/Ho_Chi_Minh
+      - MINIO_URL=http://minio:9000
+      - MINIO_ACCESS_KEY=minio_admin
+      - MINIO_SECRET_KEY=minio_password
+      - MINIO_BUCKET=catalog-media
     depends_on: 
       mysql:
         condition: service_healthy

@@ -42,3 +42,15 @@ spring:
         health-check-timeout: 5s
         health-check-critical-timeout: 30s 
         deregister: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  external-url: http://localhost:9000
+  access-key: ${MINIO_ACCESS_KEY:minio_admin}
+  secret-key: ${MINIO_SECRET_KEY:minio_password}
+  bucket: "catalog-media"

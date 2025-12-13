@@ -22,4 +22,9 @@ public class Media extends BaseEntity {
     @JoinColumn(name = "destination_id")
     @JsonIgnore
     private Destination destination;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tourism_service_id")
+    @JsonIgnore
+    private TourismService tourismService;
 }

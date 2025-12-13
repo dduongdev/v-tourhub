@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Table(name = "tourism_services")
@@ -41,4 +42,7 @@ public class TourismService extends BaseEntity {
     public enum ServiceType {
         HOTEL, RESTAURANT, ATTRACTION, TOUR
     }
+
+    @OneToMany(mappedBy = "tourismService", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Media> mediaList;
 }

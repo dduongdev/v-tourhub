@@ -5,9 +5,11 @@ import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
 import com.v_tourhub.catalog_service.dto.TourismServiceResponse;
 import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
+import com.v_tourhub.catalog_service.entity.Media;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.service.CatalogService;
+import com.v_tourhub.catalog_service.service.MediaService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,7 @@ public class CatalogController {
 
     private final CatalogService service;
     private final ServiceMapper serviceMapper;
+    private final MediaService mediaService;
 
     @GetMapping("/destinations")
     public ApiResponse<Page<Destination>> getDestinations(
@@ -113,5 +117,47 @@ public class CatalogController {
         TourismService savedEntity = service.createService(id, entity);
         
         return ApiResponse.success(serviceMapper.toResponse(savedEntity));
+    }
+
+    @PostMapping(value = "/destinations/{id}/media", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    public ApiResponse<String> uploadDestinationMedia(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "caption", required = false) String caption) {
+        
+        Media media = mediaService.addMediaToDestination(id, file, caption);
+        return ApiResponse.success(mediaService.getFileUrl(media.getUrl()));
+    }
+
+    @PostMapping(value = "/services/{id}/media", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    public ApiResponse<String> uploadServiceMedia(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "caption", required = false) String caption) {
+        
+        Media media = mediaService.addMediaToService(id, file, caption);
+        return ApiResponse.success(mediaService.getFileUrl(media.getUrl()));
+    }
+
+    @PostMapping(value = "/destinations/{id}/media/batch", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    public ApiResponse<List<String>> uploadBatchDestinationMedia(
+            @PathVariable Long id,
+            @RequestParam("files") List<MultipartFile> files) {
+        
+        List<String> urls = mediaService.addBatchMediaToDestination(id, files);
+        return ApiResponse.success(urls);
+    }
+
+    @PostMapping(value = "/services/{id}/media/batch", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    public ApiResponse<List<String>> uploadBatchServiceMedia(
+            @PathVariable Long id,
+            @RequestParam("files") List<MultipartFile> files) {
+        
+        List<String> urls = mediaService.addBatchMediaToService(id, files);
+        return ApiResponse.success(urls);
     }
 }
