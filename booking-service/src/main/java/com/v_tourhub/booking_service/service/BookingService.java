@@ -1,6 +1,8 @@
 package com.v_tourhub.booking_service.service;
 
 import com.soa.common.dto.ApiResponse;
+import com.soa.common.exception.BusinessException;
+import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.booking_service.client.CatalogClient;
 import com.v_tourhub.booking_service.dto.BookingResponse;
 import com.v_tourhub.booking_service.dto.CatalogServiceDto;
@@ -48,16 +50,16 @@ public class BookingService {
             ApiResponse<CatalogServiceDto> catalogResponse = catalogClient.getServiceDetail(request.getServiceId());
 
             if (catalogResponse == null || catalogResponse.getData() == null) {
-                throw new RuntimeException("Dịch vụ không tồn tại hoặc Catalog Service đang gặp sự cố.");
+                throw new ResourceNotFoundException("Dịch vụ không tồn tại hoặc Catalog Service đang gặp sự cố.");
             }
 
             CatalogServiceDto serviceInfo = catalogResponse.getData();
 
             if (Boolean.FALSE.equals(serviceInfo.getAvailability())) {
-                throw new RuntimeException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
+                throw new BusinessException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
             }
             if (request.getCheckInDate().isAfter(request.getCheckOutDate())) {
-                throw new RuntimeException("Ngày Check-in phải trước ngày Check-out.");
+                throw new BusinessException("Ngày Check-in phải trước ngày Check-out.");
             }
 
             BigDecimal totalPrice = serviceInfo.getPrice().multiply(new BigDecimal(request.getGuests()));
@@ -110,13 +112,13 @@ public class BookingService {
     @Transactional
     public void cancelBooking(Long bookingId, String userId) {
         Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn đặt hàng hoặc bạn không có quyền hủy."));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt hàng hoặc bạn không có quyền hủy."));
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new RuntimeException("Đơn hàng này đã bị hủy trước đó.");
+            throw new BusinessException("Đơn hàng này đã bị hủy trước đó.");
         }
         if (booking.getStatus() == BookingStatus.COMPLETED) {
-            throw new RuntimeException("Không thể hủy đơn hàng đã hoàn thành.");
+            throw new BusinessException("Không thể hủy đơn hàng đã hoàn thành.");
         }
 
         BookingStatus oldStatus = booking.getStatus();
@@ -151,7 +153,7 @@ public class BookingService {
     @Transactional
     public void completeBooking(Long bookingId, String transactionId) {
         Booking booking = bookingRepo.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found: " + bookingId));
 
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             booking.setStatus(BookingStatus.CONFIRMED);
