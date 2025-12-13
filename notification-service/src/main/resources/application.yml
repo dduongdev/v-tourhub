@@ -26,6 +26,18 @@ spring:
     username: ${SPRING_RABBITMQ_USERNAME:guest}
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
 
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost} 
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ""
+    password: ""
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
   cloud:
     consul:
       host: ${SPRING_CLOUD_CONSUL_HOST:localhost}
