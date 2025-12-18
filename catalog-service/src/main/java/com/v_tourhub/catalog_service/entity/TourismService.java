@@ -26,23 +26,26 @@ public class TourismService extends BaseEntity {
     
     private Boolean availability;
     
-    private Long providerId; // ID của Provider (Service khác)
-
-    @Enumerated(EnumType.STRING)
-    private ServiceType type;
+    private Long providerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destination_id")
     @JsonIgnore
     private Destination destination;
-    
-    // Rating riêng cho dịch vụ
-    private Double averageRating;
-
-    public enum ServiceType {
-        HOTEL, RESTAURANT, ATTRACTION, TOUR
-    }
 
     @OneToMany(mappedBy = "tourismService", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Media> mediaList;
+
+    @OneToMany(mappedBy = "tourismService", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Attribute> attributes;
+
+    @Enumerated(EnumType.STRING)
+    private ServiceType serviceType;
+
+    public enum ServiceType {
+        HOTEL, // Bán theo đêm (Date Range)
+        TOUR,  // Bán theo suất/ngày khởi hành (Single Date)
+        ACTIVITY, // Vé tham quan, vé xe (Single Date)
+        RESTAURANT // Có thể không cần kho, hoặc kho theo bàn/giờ
+    }
 }

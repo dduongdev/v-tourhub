@@ -14,6 +14,7 @@ import com.v_tourhub.catalog_service.service.MediaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -69,10 +70,14 @@ public class CatalogController {
     }
 
     @GetMapping("/services/{type}")
-    public ApiResponse<List<TourismService>> getServicesByType(
+    public ApiResponse<Page<TourismServiceResponse>> getServicesByType(
             @PathVariable TourismService.ServiceType type,
-            @RequestParam(required = false) String location) {
-        return ApiResponse.success(service.getServicesByTypeAndLocation(type, location));
+            @RequestParam(required = false) String location,
+            Pageable pageable) {
+        
+        Page<TourismService> resultPage = service.getServicesByTypeAndLocation(type, location, pageable);
+        Page<TourismServiceResponse> dtoPage = resultPage.map(serviceMapper::toResponse);
+        return ApiResponse.success(dtoPage);
     }
 
     @GetMapping("/categories")

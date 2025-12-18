@@ -18,7 +18,6 @@ public class ServiceMapper {
                 .price(entity.getPrice())
                 .availability(entity.getAvailability())
                 .providerId(entity.getProviderId())
-                .type(entity.getType().name())
                 .destinationName(entity.getDestination() != null ? entity.getDestination().getName() : null)
                 .build();
     }
@@ -31,7 +30,6 @@ public class ServiceMapper {
                 .price(request.getPrice())
                 .availability(request.getAvailability())
                 .providerId(request.getProviderId())
-                .type(request.getType())
                 .build();
     }
 }

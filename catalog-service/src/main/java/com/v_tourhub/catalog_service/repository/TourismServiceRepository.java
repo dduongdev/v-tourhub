@@ -1,5 +1,7 @@
 package com.v_tourhub.catalog_service.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,7 +14,7 @@ import java.util.List;
 @Repository
 public interface TourismServiceRepository extends JpaRepository<TourismService, Long> {
 
-    List<TourismService> findByType(TourismService.ServiceType type);
+    Page<TourismService> findByType(TourismService.ServiceType type, Pageable pageable);
 
     List<TourismService> findByDestinationId(Long destinationId);
 
@@ -21,6 +23,6 @@ public interface TourismServiceRepository extends JpaRepository<TourismService, 
            "AND (:location IS NULL OR :location = '' OR " +
            "LOWER(s.destination.location.city) LIKE LOWER(CONCAT('%', :location, '%')) OR " +
            "LOWER(s.destination.location.province) LIKE LOWER(CONCAT('%', :location, '%')))")
-    List<TourismService> findByTypeAndLocation(@Param("type") TourismService.ServiceType type,
-                                               @Param("location") String location);
+    Page<TourismService> findByTypeAndLocation(@Param("type") TourismService.ServiceType type,
+                                               @Param("location") String location, Pageable pageable);
 }

@@ -24,12 +24,6 @@ public class Destination extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-    
-    private Double averageRating;
-    private Integer totalReviews;
-
-    @Enumerated(EnumType.STRING)
-    private DestinationStatus status; // ACTIVE, INACTIVE
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "location_id")
@@ -44,8 +38,4 @@ public class Destination extends BaseEntity {
 
     @OneToMany(mappedBy = "destination", cascade = CascadeType.ALL)
     private List<Media> mediaList;
-
-    public enum DestinationStatus {
-        ACTIVE, INACTIVE, DRAFT
-    }
 }
