@@ -49,18 +49,6 @@ spring:
           uri: lb://userprofile-service
           predicates:
             - Path=/api/users/**
-            
-        # --- Provider Service ---
-        - id: provider-service
-          uri: lb://provider-service
-          predicates:
-            - Path=/api/providers/**
-
-        # --- Review Service ---
-        - id: review-service
-          uri: lb://review-service
-          predicates:
-            - Path=/api/reviews/**
 
         # --- Payment Service ---
         - id: payment-service

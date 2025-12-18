@@ -23,15 +23,10 @@
         <!-- 3. Core Business Services -->
         <module>catalog-service</module>
         <module>booking-service</module>
-        <module>provider-service</module>
         <module>payment-service</module>
-        <module>review-service</module>
         
-        <!-- 4. Support Services -->
         <module>userprofile-service</module>
         <module>notification-service</module>
-        <module>analytics-service</module>
-        <module>integration-service</module>
     </modules>
 
     <properties>

@@ -298,68 +298,6 @@ services:
         condition: service_started
     networks: [soa-network]
 
-  # 5. PROVIDER SERVICE
-  provider-service:
-    build:
-      context: .
-      dockerfile: provider-service/Dockerfile
-    container_name: soa-provider
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/provider_db
-      - SPRING_DATASOURCE_USERNAME=soa_user
-      - SPRING_DATASOURCE_PASSWORD=soa_password
-      - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=admin
-      - SPRING_RABBITMQ_PASSWORD=admin123
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - TZ=Asia/Ho_Chi_Minh
-    depends_on: 
-      mysql:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks: [soa-network]
-
-  # 6. REVIEW SERVICE
-  review-service:
-    build:
-      context: .
-      dockerfile: review-service/Dockerfile
-    container_name: soa-review
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/review_db
-      - SPRING_DATASOURCE_USERNAME=soa_user
-      - SPRING_DATASOURCE_PASSWORD=soa_password
-      - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=admin
-      - SPRING_RABBITMQ_PASSWORD=admin123
-      - TZ=Asia/Ho_Chi_Minh
-    depends_on: 
-      mysql:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks: [soa-network]
-
   # 7. PAYMENT SERVICE
   payment-service:
     build:
@@ -419,58 +357,6 @@ services:
       rabbitmq:
         condition: service_healthy
       maildev:
-        condition: service_healthy
-    networks: [soa-network]
-
-  # 9. ANALYTICS SERVICE
-  analytics-service:
-    build:
-      context: .
-      dockerfile: analytics-service/Dockerfile
-    container_name: soa-analytics
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/analytics_db
-      - SPRING_DATASOURCE_USERNAME=soa_user
-      - SPRING_DATASOURCE_PASSWORD=soa_password
-      - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=admin
-      - SPRING_RABBITMQ_PASSWORD=admin123
-      - TZ=Asia/Ho_Chi_Minh
-    depends_on: 
-      mysql:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks: [soa-network]
-
-  # 10. INTEGRATION SERVICE
-  integration-service:
-    build:
-      context: .
-      dockerfile: integration-service/Dockerfile
-    container_name: soa-integration
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - TZ=Asia/Ho_Chi_Minh
-    depends_on: 
-      consul:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks: [soa-network]
 
