@@ -6,6 +6,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -16,6 +18,9 @@ public class RabbitMQConfig {
 
     public static final String ROUTING_KEY_PAYMENT_COMPLETED = "payment.completed";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
+
+    public static final String QUEUE_BOOKING_CANCELLED = "payment.booking.cancelled.queue";
+    public static final String ROUTING_KEY_BOOKING_CANCELLED = "booking.cancelled";
 
     @Bean
     public TopicExchange bookingExchange() {
@@ -33,7 +38,17 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
+    }
+
+    @Bean
+    public Queue bookingCancelledQueue() {
+        return new Queue(QUEUE_BOOKING_CANCELLED, true);
+    }
+
+    @Bean
+    public Binding bindingBookingCancelled(Queue bookingCancelledQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(bookingCancelledQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_CANCELLED);
     }
 }

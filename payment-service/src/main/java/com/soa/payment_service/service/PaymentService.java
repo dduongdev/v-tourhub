@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nimbusds.jose.util.Resource;
+import com.soa.common.event.BookingCancelledEvent;
+import com.soa.common.event.PaymentCompletedEvent;
+import com.soa.common.event.PaymentFailedEvent;
 import com.soa.common.exception.BusinessException;
 import com.soa.common.exception.ResourceNotFoundException;
 import com.soa.payment_service.config.RabbitMQConfig;
@@ -155,7 +158,7 @@ public class PaymentService {
         }
     }
 
-     private void handlePaymentFailed(Long bookingId, String reason) {
+    private void handlePaymentFailed(Long bookingId, String reason) {
         paymentRepo.findByBookingId(bookingId).ifPresent(payment -> handlePaymentFailed(payment, reason));
     }
 
@@ -167,16 +170,25 @@ public class PaymentService {
     }
 
     private void publishPaymentEvent(Payment payment, String routingKey, String statusMsg) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("bookingId", payment.getBookingId());
-        event.put("paymentId", payment.getId());
-        event.put("userId", payment.getUserId());
-        event.put("amount", payment.getAmount());
-        event.put("transactionId", payment.getGatewayTransactionId());
-        event.put("status", statusMsg); 
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
-        log.info("Published {} for booking {}", routingKey, payment.getBookingId());
+        if ("SUCCESS".equals(statusMsg)) {
+            PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+                    .bookingId(payment.getBookingId())
+                    .paymentId(payment.getId())
+                    .userId(payment.getUserId())
+                    .amount(payment.getAmount())
+                    .transactionId(payment.getGatewayTransactionId())
+                    .paymentMethod(payment.getMethod() != null ? payment.getMethod().name() : null)
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
+        } else {
+            PaymentFailedEvent event = PaymentFailedEvent.builder()
+                    .bookingId(payment.getBookingId())
+                    .userId(payment.getUserId())
+                    .reason(statusMsg)
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
+        }
+        log.info("Published {} event for Booking ID {}", routingKey, payment.getBookingId());
     }
 
     private boolean verifySignature(Map<String, String> queryParams, String vnp_SecureHash) {
@@ -211,5 +223,20 @@ public class PaymentService {
         String signValue = vnpayConfig.hmacSHA512(vnpayConfig.getVnp_HashSecret(), hashData.toString());
         
         return signValue.equals(vnp_SecureHash);
+    }
+
+    @Transactional
+    public void handleBookingCancellation(BookingCancelledEvent event) {
+        paymentRepo.findByBookingId(event.getBookingId()).ifPresent(payment -> {
+            
+            if (payment.getStatus() == PaymentStatus.PENDING) {
+                payment.setStatus(PaymentStatus.FAILED);
+                paymentRepo.save(payment);
+                log.info("Payment for Booking ID {} has been cancelled.", event.getBookingId());
+
+            } else if (payment.getStatus() == PaymentStatus.COMPLETED) {
+                log.info("Booking ID {} was cancelled after payment. Initiating refund process...", event.getBookingId());
+            }
+        });
     }
 }

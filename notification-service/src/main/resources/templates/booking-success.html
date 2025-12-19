@@ -16,15 +16,17 @@
         <h2>Xác Nhận Đặt Chỗ Thành Công</h2>
     </div>
     <div class="content">
-        <p>Xin chào <b th:text="${customerName}">Khách hàng</b>,</p>
+        <p>Xin chào <b th:text="${event.customerName}">Khách hàng</b>,</p>
         <p>Cảm ơn bạn đã đặt dịch vụ tại <b>V-TourHub</b>. Đơn hàng của bạn đã được xác nhận.</p>
         
         <h3>Chi tiết đơn hàng:</h3>
         <ul>
-            <li><b>Mã đơn hàng:</b> <span th:text="${bookingId}">123</span></li>
-            <li><b>Dịch vụ:</b> <span th:text="${serviceName}">Tên dịch vụ</span></li> 
-            <li><b>Ngày Check-in:</b> <span th:text="${checkIn}">2025-01-01</span></li>
-            <li><b>Số khách:</b> <span th:text="${guests}">2</span></li>
+            <li><b>Mã đơn hàng:</b> <span th:text="${event.bookingId}">123</span></li>
+            <li><b>Dịch vụ:</b> <span th:text="${event.serviceName}">Tên dịch vụ</span></li>
+            <li><b>Ngày Check-in:</b> <span th:text="${event.checkIn}">2025-01-01</span></li>
+            <li><b>Số khách:</b> <span th:text="${event.guests}">2</span></li>
+            <li><b>Số lượng: <span th:text="${event.quantity}">1</span></b></li>
+            <li><b>Tổng số tiền:</b> <span th:text="${#numbers.formatDecimal(event.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' ' + ${event.currency}">1,000,000 VND</span></li>
         </ul>
         
         <p>Chúc bạn có một chuyến đi vui vẻ!</p>

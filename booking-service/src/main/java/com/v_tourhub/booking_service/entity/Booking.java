@@ -36,6 +36,9 @@ public class Booking extends BaseEntity {
     
     private Integer guests;
 
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
+    private Integer quantity;
+
     private BigDecimal totalPrice;
 
     private String inventoryLockToken;

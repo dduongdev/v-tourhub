@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import com.soa.common.event.BookingConfirmedEvent;
 import com.v_tourhub.notification_service.config.RabbitMQConfig;
 import com.v_tourhub.notification_service.service.EmailService;
 
@@ -18,12 +19,11 @@ public class NotificationEventListener {
     private final EmailService emailService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_EMAIL)
-    public void handleBookingConfirmed(Map<String, Object> event) {
-        log.info("Received booking confirmed event: {}", event);
+    public void handleBookingConfirmed(BookingConfirmedEvent event) { 
+        log.info("Received BookingConfirmedEvent: {}", event);
         
-        String email = (String) event.get("customerEmail");
-        if (email != null && !email.isEmpty()) {
-            emailService.sendBookingConfirmation(email, event);
+        if (event.getCustomerEmail() != null && !event.getCustomerEmail().isEmpty()) {
+            emailService.sendBookingConfirmation(event);
         } else {
             log.warn("No customer email found in event, skipping email sending.");
         }

@@ -25,8 +25,6 @@ public class TourismService extends BaseEntity {
     private BigDecimal price;
     
     private Boolean availability;
-    
-    private Long providerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destination_id")
@@ -40,7 +38,7 @@ public class TourismService extends BaseEntity {
     private List<Attribute> attributes;
 
     @Enumerated(EnumType.STRING)
-    private ServiceType serviceType;
+    private ServiceType type;
 
     public enum ServiceType {
         HOTEL, // Bán theo đêm (Date Range)

@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import com.soa.common.event.PaymentCompletedEvent;
+import com.soa.common.event.PaymentFailedEvent;
 import com.v_tourhub.booking_service.config.RabbitMQConfig;
 import com.v_tourhub.booking_service.service.BookingService;
-
-import java.util.Map;
 
 @Component
 @Slf4j
@@ -17,31 +17,21 @@ public class PaymentEventListener {
 
     private final BookingService bookingService;
 
-    // --- CASE 1: THANH TOÁN THÀNH CÔNG ---
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_COMPLETED)
-    public void handlePaymentCompleted(Map<String, Object> event) {
-        log.info("Received Payment Completed Event: {}", event);
+    public void handlePaymentCompleted(PaymentCompletedEvent event) { 
+        log.info("Received PaymentCompletedEvent: {}", event);
         try {
-            Long bookingId = Long.valueOf(event.get("bookingId").toString());
-            String transactionId = (String) event.get("transactionId");
-
-            bookingService.completeBooking(bookingId, transactionId);
-
+            bookingService.completeBooking(event.getBookingId(), event.getTransactionId());
         } catch (Exception e) {
             log.error("Error processing payment completed event", e);
         }
     }
 
-    // --- CASE 2: THANH TOÁN THẤT BẠI ---
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_FAILED)
-    public void handlePaymentFailed(Map<String, Object> event) {
-        log.info("Received Payment Failed Event: {}", event);
+    public void handlePaymentFailed(PaymentFailedEvent event) {
+        log.info("Received PaymentFailedEvent: {}", event);
         try {
-            Long bookingId = Long.valueOf(event.get("bookingId").toString());
-            String reason = (String) event.getOrDefault("status", "Unknown Error");
-
-            bookingService.handlePaymentFailure(bookingId, reason);
-
+            bookingService.handlePaymentFailure(event.getBookingId(), event.getReason());
         } catch (Exception e) {
             log.error("Error processing payment failed event", e);
         }

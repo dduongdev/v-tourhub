@@ -1,12 +1,16 @@
 package com.v_tourhub.booking_service.service;
 
 import com.soa.common.dto.ApiResponse;
+import com.soa.common.dto.InternalServiceResponse;
+import com.soa.common.event.BookingCancelledEvent;
+import com.soa.common.event.BookingConfirmedEvent;
+import com.soa.common.event.BookingCreatedEvent;
+import com.soa.common.event.InventoryLockFailedEvent;
 import com.soa.common.exception.BusinessException;
 import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.booking_service.client.CatalogClient;
 import com.v_tourhub.booking_service.config.RabbitMQConfig;
 import com.v_tourhub.booking_service.dto.BookingResponse;
-import com.v_tourhub.booking_service.dto.CatalogServiceDto;
 import com.v_tourhub.booking_service.dto.CreateBookingRequest;
 import com.v_tourhub.booking_service.entity.Booking;
 import com.v_tourhub.booking_service.entity.BookingStatus;
@@ -37,6 +41,7 @@ public class BookingService {
 
     private static final String BOOKING_EXCHANGE = "booking.exchange";
     private static final String ROUTING_KEY_CREATED = "booking.created";
+    private static final String ROUTING_KEY_CONFIRMED = "booking.confirmed";
     private static final String ROUTING_KEY_CANCELLED = "booking.cancelled";
 
     @Transactional
@@ -44,36 +49,33 @@ public class BookingService {
         String lockKey = "lock:inventory:" + request.getServiceId();
 
         if (!redisLockService.tryLock(lockKey, 10)) {
-            throw new RuntimeException("Hệ thống đang bận xử lý dịch vụ này, vui lòng thử lại sau.");
+            throw new BusinessException("Hệ thống đang bận xử lý dịch vụ này, vui lòng thử lại sau.");
         }
 
         try {
-            ApiResponse<CatalogServiceDto> catalogResponse = catalogClient.getServiceDetail(request.getServiceId());
-
+            ApiResponse<InternalServiceResponse> catalogResponse = catalogClient.getServiceDetail(request.getServiceId());
             if (catalogResponse == null || catalogResponse.getData() == null) {
-                throw new ResourceNotFoundException("Dịch vụ không tồn tại hoặc Catalog Service đang gặp sự cố.");
+                throw new ResourceNotFoundException("Dịch vụ", "id", request.getServiceId());
             }
 
-            CatalogServiceDto serviceInfo = catalogResponse.getData();
+            InternalServiceResponse serviceInfo = catalogResponse.getData();
 
-            if (Boolean.FALSE.equals(serviceInfo.getAvailability())) {
-                throw new BusinessException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
-            }
-            if (request.getCheckInDate().isAfter(request.getCheckOutDate())) {
-                throw new BusinessException("Ngày Check-in phải trước ngày Check-out.");
-            }
+            int quantityToLock = determineQuantity(request, serviceInfo.getType());
 
-            BigDecimal totalPrice = serviceInfo.getPrice().multiply(new BigDecimal(request.getGuests()));
+            validateBookingRequest(request, serviceInfo, quantityToLock);
+
+            BigDecimal totalPrice = calculateTotalPrice(serviceInfo.getPrice(), quantityToLock, request.getGuests(),
+                    serviceInfo.getType());
 
             Booking booking = Booking.builder()
                     .userId(userId)
                     .serviceId(serviceInfo.getId())
                     .serviceName(serviceInfo.getName())
-                    .providerId(serviceInfo.getProviderId())
                     .status(BookingStatus.PENDING_PAYMENT)
                     .checkInDate(request.getCheckInDate())
                     .checkOutDate(request.getCheckOutDate())
                     .guests(request.getGuests())
+                    .quantity(quantityToLock)
                     .totalPrice(totalPrice)
                     .inventoryLockToken(UUID.randomUUID().toString())
                     .expiresAt(LocalDateTime.now().plusMinutes(15))
@@ -84,21 +86,58 @@ public class BookingService {
 
             Booking savedBooking = bookingRepo.save(booking);
 
-            Map<String, Object> event = new HashMap<>();
-            event.put("bookingId", savedBooking.getId());
-            event.put("userId", userId);
-            event.put("amount", totalPrice);
-            event.put("serviceName", serviceInfo.getName());
-            event.put("customerEmail", request.getCustomerEmail());
+            BookingCreatedEvent event = BookingCreatedEvent.builder()
+                    .bookingId(savedBooking.getId())
+                    .userId(userId)
+                    .serviceId(serviceInfo.getId())
+                    .serviceName(serviceInfo.getName())
+                    .checkIn(request.getCheckInDate())
+                    .checkOut(request.getCheckOutDate())
+                    .quantity(quantityToLock)
+                    .guests(request.getGuests())
+                    .amount(totalPrice)
+                    .customerEmail(request.getCustomerEmail())
+                    .createdAt(LocalDateTime.now())
+                    .build();
 
             rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CREATED, event);
-            log.info("Booking created: ID={}, Status={}", savedBooking.getId(), savedBooking.getStatus());
+            log.info("Published BookingCreatedEvent for ID={}", savedBooking.getId());
 
             return mapToDto(savedBooking, serviceInfo.getName());
 
         } finally {
             redisLockService.unlock(lockKey);
         }
+    }
+
+    private int determineQuantity(CreateBookingRequest request, String serviceType) {
+        // Ưu tiên quantity do user gửi lên
+        if (request.getQuantity() != null && request.getQuantity() > 0) {
+            return request.getQuantity();
+        }
+
+        // Nếu không, tự suy luận
+        if ("HOTEL".equalsIgnoreCase(serviceType) || "RESTAURANT".equalsIgnoreCase(serviceType)) {
+            return 1; // Mặc định đặt 1 phòng / 1 bàn
+        } else { // TOUR, ACTIVITY
+            return request.getGuests(); // Mặc định 1 người 1 vé/suất
+        }
+    }
+
+    private void validateBookingRequest(CreateBookingRequest request, InternalServiceResponse serviceInfo, int quantity) {
+        if (Boolean.FALSE.equals(serviceInfo.getAvailability())) {
+            throw new BusinessException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
+        }
+
+        if ("HOTEL".equalsIgnoreCase(serviceInfo.getType())) {
+            if (request.getCheckOutDate() == null || !request.getCheckInDate().isBefore(request.getCheckOutDate())) {
+                throw new BusinessException("Ngày Check-out phải sau ngày Check-in đối với Khách sạn.");
+            }
+        }
+    }
+
+    private BigDecimal calculateTotalPrice(BigDecimal pricePerUnit, int quantity, int guests, String serviceType) {
+        return pricePerUnit.multiply(new BigDecimal(quantity));
     }
 
     @Transactional(readOnly = true)
@@ -113,7 +152,8 @@ public class BookingService {
     @Transactional
     public void cancelBooking(Long bookingId, String userId) {
         Booking booking = bookingRepo.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt hàng hoặc bạn không có quyền hủy."));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy đơn đặt hàng hoặc bạn không có quyền hủy."));
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new BusinessException("Đơn hàng này đã bị hủy trước đó.");
@@ -122,18 +162,23 @@ public class BookingService {
             throw new BusinessException("Không thể hủy đơn hàng đã hoàn thành.");
         }
 
-        BookingStatus oldStatus = booking.getStatus();
+        String oldStatus = booking.getStatus().name();
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepo.save(booking);
 
-        log.info("Booking cancelled: ID={}, OldStatus={}", bookingId, oldStatus);
+        log.info("Booking cancelled by user: ID={}, OldStatus={}", bookingId, oldStatus);
 
-        Map<String, Object> event = new HashMap<>();
-        event.put("bookingId", bookingId);
-        event.put("serviceId", booking.getServiceId());
-        event.put("userId", userId);
-        event.put("reason", "User requested cancellation");
-        event.put("previousStatus", oldStatus.name());
+        // Tạo Event DTO
+        BookingCancelledEvent event = BookingCancelledEvent.builder()
+                .bookingId(bookingId)
+                .serviceId(booking.getServiceId())
+                .userId(userId)
+                .reason("User requested cancellation")
+                .previousStatus(oldStatus)
+                .checkIn(booking.getCheckInDate())
+                .checkOut(booking.getCheckOutDate())
+                .quantity(booking.getQuantity()) 
+                .build();
 
         rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
     }
@@ -161,33 +206,35 @@ public class BookingService {
 
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             booking.setStatus(BookingStatus.CONFIRMED);
-            
+
             log.info("Booking {} CONFIRMED. Transaction: {}", bookingId, transactionId);
-            
+
             bookingRepo.save(booking);
-            
+
             publishConfirmedEvent(booking);
         } else {
             log.warn("Ignored payment completion for Booking {} because status is {}", bookingId, booking.getStatus());
         }
     }
 
-     private void publishConfirmedEvent(Booking booking) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("bookingId", booking.getId());
-        event.put("userId", booking.getUserId());
-        event.put("serviceId", booking.getServiceId());
-        event.put("providerId", booking.getProviderId());
-        event.put("checkIn", booking.getCheckInDate().toString());
-        event.put("checkOut", booking.getCheckOutDate().toString());
-        event.put("guests", booking.getGuests());
-        event.put("serviceName", booking.getServiceName());
-        
-        event.put("customerEmail", booking.getCustomerEmail());
-        event.put("customerName", booking.getCustomerName());
-        
-        rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, RabbitMQConfig.ROUTING_KEY_CONFIRMED, event);
-        log.info("Published booking.confirmed event for Booking {}", booking.getId());
+    private void publishConfirmedEvent(Booking booking) {
+        BookingConfirmedEvent event = BookingConfirmedEvent.builder()
+                .bookingId(booking.getId())
+                .userId(booking.getUserId())
+                .serviceId(booking.getServiceId())
+                .checkIn(booking.getCheckInDate())
+                .checkOut(booking.getCheckOutDate())
+                .guests(booking.getGuests())
+                .quantity(booking.getQuantity()) 
+                .customerEmail(booking.getCustomerEmail())
+                .customerName(booking.getCustomerName())
+                .serviceName(booking.getServiceName())
+                .totalAmount(booking.getTotalPrice())
+                .currency("VND")
+                .build();
+
+        rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CONFIRMED, event);
+        log.info("Published BookingConfirmedEvent for Booking ID {}", booking.getId());
     }
 
     // =========================================================================
@@ -196,24 +243,101 @@ public class BookingService {
     @Transactional
     public void handlePaymentFailure(Long bookingId, String reason) {
         Booking booking = bookingRepo.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
 
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
-            log.warn("Payment FAILED for Booking {}. Reason: {}. Cancelling booking...", bookingId, reason);
+            log.warn("Payment FAILED for Booking {}. Reason: {}. Cancelling...", bookingId, reason);
+
+            String oldStatus = booking.getStatus().name();
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepo.save(booking);
+
+            BookingCancelledEvent event = BookingCancelledEvent.builder()
+                    .bookingId(bookingId)
+                    .serviceId(booking.getServiceId())
+                    .userId(booking.getUserId())
+                    .reason("Payment Failed: " + reason)
+                    .previousStatus(oldStatus)
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity()) 
+                    .build();
+
+            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
+            log.info("Published BookingCancelledEvent for Booking ID {}", bookingId);
+        } else {
+            log.info("Payment failed but booking {} is already in status {}. Skipping.", bookingId,
+                    booking.getStatus());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Booking getBooking(Long bookingId) {
+        log.info("Admin fetching booking with ID: {}", bookingId);
+        return bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+    }
+
+    @Transactional
+    public void cancelBookingByAdmin(Long bookingId) {
+        Booking booking = getBooking(bookingId); 
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            log.warn("Admin tried to cancel an already cancelled booking: {}", bookingId);
+            return; 
+        }
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new BusinessException("Không thể hủy đơn hàng đã hoàn thành.");
+        }
+
+        String oldStatus = booking.getStatus().name();
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepo.save(booking);
+        log.info("Booking cancelled by ADMIN: ID={}, OldStatus={}", bookingId, oldStatus);
+        
+        BookingCancelledEvent event = BookingCancelledEvent.builder()
+                .bookingId(bookingId)
+                .serviceId(booking.getServiceId())
+                .userId(booking.getUserId()) 
+                .reason("Cancelled by Administrator")
+                .previousStatus(oldStatus)
+                .checkIn(booking.getCheckInDate())
+                .checkOut(booking.getCheckOutDate())
+                .quantity(booking.getQuantity())
+                .build();
+
+        rabbitTemplate.convertAndSend("booking.exchange", "booking.cancelled", event);
+    }
+
+    @Transactional
+    public void handleInventoryLockFailure(InventoryLockFailedEvent event) {
+        Booking booking = bookingRepo.findById(event.getBookingId())
+                .orElse(null);
+
+        if (booking == null) {
+            log.warn("Received inventory.lock.failed for a non-existent booking ID: {}", event.getBookingId());
+            return;
+        }
+
+        if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            log.warn("Inventory lock FAILED for Booking {}. Reason: {}. Cancelling...", event.getBookingId(), event.getReason());
             
             booking.setStatus(BookingStatus.CANCELLED);
             bookingRepo.save(booking);
 
-            Map<String, Object> event = new HashMap<>();
-            event.put("bookingId", bookingId);
-            event.put("serviceId", booking.getServiceId());
-            event.put("reason", "Payment Failed: " + reason);
-            event.put("inventoryLockToken", booking.getInventoryLockToken()); 
+            BookingCancelledEvent cancelledEvent = BookingCancelledEvent.builder()
+                    .bookingId(booking.getId())
+                    .serviceId(booking.getServiceId())
+                    .userId(booking.getUserId())
+                    .reason("Inventory Lock Failed: " + event.getReason())
+                    .previousStatus("PENDING_PAYMENT")
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity())
+                    .build();
             
-            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
-            log.info("Sent booking.cancelled event for Booking {}", bookingId);
-        } else {
-            log.info("Booking {} payment failed but status is already {}. Skipping.", bookingId, booking.getStatus());
+            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, "booking.cancelled", cancelledEvent);
+            log.info("Published BookingCancelledEvent due to inventory lock failure for Booking ID {}", booking.getId());
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.v_tourhub.booking_service.dto;
 
 import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -12,14 +13,18 @@ public class CreateBookingRequest {
     private Long serviceId;
 
     @NotNull(message = "Check-in date is required")
-    @Future(message = "Check-in date must be in the future")
+    @FutureOrPresent(message = "Check-in date must be in the present or future")
     private LocalDate checkInDate;
 
-    @Future(message = "Check-out date must be in the future")
+    @FutureOrPresent(message = "Check-out date must be in the present or future")
     private LocalDate checkOutDate;
 
+    @NotNull
     @Min(value = 1, message = "Guests must be at least 1")
     private Integer guests;
+
+    @Min(value = 1, message = "Quantity must be at least 1")
+    private Integer quantity; 
 
     // Thông tin khách hàng (snapshot)
     private String customerName;

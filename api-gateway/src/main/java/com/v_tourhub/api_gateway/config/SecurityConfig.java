@@ -20,7 +20,7 @@ public class SecurityConfig {
             .csrf(ServerHttpSecurity.CsrfSpec::disable) 
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
-                .pathMatchers(HttpMethod.GET, "/api/reviews/**").permitAll() 
+                .pathMatchers(HttpMethod.GET, "/api/users/{userId}/public").permitAll()
                 .pathMatchers("/api/payments/vnpay-return").permitAll()
                 .pathMatchers("/actuator/**").permitAll()
                 

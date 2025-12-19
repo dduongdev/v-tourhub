@@ -6,6 +6,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -13,7 +15,7 @@ public class RabbitMQConfig {
     public static final String QUEUE_PAYMENT = "payment.process.queue";
     public static final String ROUTING_KEY_CREATED = "booking.created";
 
-    public static final String QUEUE_CANCELLED = "booking.cancelled.queue"; 
+    public static final String QUEUE_CANCELLED = "booking.cancelled.queue";
     public static final String ROUTING_KEY_CANCELLED = "booking.cancelled";
 
     public static final String QUEUE_PAYMENT_COMPLETED = "payment.completed.queue";
@@ -22,7 +24,10 @@ public class RabbitMQConfig {
     public static final String QUEUE_PAYMENT_FAILED = "payment.failed.queue";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
 
-    public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed"; 
+    public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed";
+
+    public static final String QUEUE_INVENTORY_LOCK_FAILED = "booking.inventory.lock.failed.queue";
+    public static final String ROUTING_KEY_INVENTORY_LOCK_FAILED = "inventory.lock.failed";
 
     @Bean
     public TopicExchange bookingExchange() {
@@ -30,15 +35,15 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
-    
+
     @Bean
     public Queue paymentQueue() {
         return new Queue(QUEUE_PAYMENT, true);
     }
-    
+
     @Bean
     public Binding bindingPayment(Queue paymentQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(paymentQueue).to(bookingExchange).with(ROUTING_KEY_CREATED);
@@ -64,7 +69,7 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(paymentCompletedQueue).to(bookingExchange).with(ROUTING_KEY_PAYMENT_COMPLETED);
     }
 
-     @Bean
+    @Bean
     public Queue paymentFailedQueue() {
         return new Queue(QUEUE_PAYMENT_FAILED, true);
     }
@@ -72,5 +77,15 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingPaymentFailed(Queue paymentFailedQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(paymentFailedQueue).to(bookingExchange).with(ROUTING_KEY_PAYMENT_FAILED);
+    }
+
+    @Bean
+    public Queue inventoryLockFailedQueue() {
+        return new Queue(QUEUE_INVENTORY_LOCK_FAILED, true);
+    }
+
+    @Bean
+    public Binding bindingInventoryLockFailed(Queue inventoryLockFailedQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(inventoryLockFailedQueue).to(bookingExchange).with(ROUTING_KEY_INVENTORY_LOCK_FAILED);
     }
 }

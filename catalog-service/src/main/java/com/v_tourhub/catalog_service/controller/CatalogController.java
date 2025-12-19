@@ -1,14 +1,17 @@
 package com.v_tourhub.catalog_service.controller;
 
 import com.soa.common.dto.ApiResponse;
+import com.soa.common.dto.InternalServiceResponse;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
-import com.v_tourhub.catalog_service.dto.TourismServiceResponse;
+import com.v_tourhub.catalog_service.dto.PublicTourismServiceDTO;
 import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
+import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Media;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.service.CatalogService;
+import com.v_tourhub.catalog_service.service.InventoryService;
 import com.v_tourhub.catalog_service.service.MediaService;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +35,7 @@ public class CatalogController {
     private final CatalogService service;
     private final ServiceMapper serviceMapper;
     private final MediaService mediaService;
+    private final InventoryService inventoryService;
 
     @GetMapping("/destinations")
     public ApiResponse<Page<Destination>> getDestinations(
@@ -50,39 +55,34 @@ public class CatalogController {
         return ApiResponse.success(service.getDestinationById(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
     @PostMapping("/destinations")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Destination> createDestination(@RequestBody Destination dest) {
         return ApiResponse.success(service.createDestination(dest));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
     @PutMapping("/destinations/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Destination> updateDestination(@PathVariable Long id, @RequestBody Destination dest) {
         return ApiResponse.success(service.updateDestination(id, dest));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/destinations/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> deleteDestination(@PathVariable Long id) {
         service.deleteDestination(id);
         return ApiResponse.success(null, "Deleted successfully");
     }
 
     @GetMapping("/services/{type}")
-    public ApiResponse<Page<TourismServiceResponse>> getServicesByType(
+    public ApiResponse<Page<PublicTourismServiceDTO>> getServicesByType(
             @PathVariable TourismService.ServiceType type,
             @RequestParam(required = false) String location,
             Pageable pageable) {
         
         Page<TourismService> resultPage = service.getServicesByTypeAndLocation(type, location, pageable);
-        Page<TourismServiceResponse> dtoPage = resultPage.map(serviceMapper::toResponse);
+        Page<PublicTourismServiceDTO> dtoPage = resultPage.map(serviceMapper::toPublicDTO);
         return ApiResponse.success(dtoPage);
-    }
-
-    @GetMapping("/categories")
-    public ApiResponse<List<Category>> getCategories() {
-        return ApiResponse.success(service.getAllCategories());
     }
 
     @GetMapping("/search")
@@ -105,15 +105,15 @@ public class CatalogController {
         return ApiResponse.success(service.searchDestinations(q, filters, PageRequest.of(page, size, sorting)));
     }
 
-    @GetMapping("/services/detail/{id}")
-    public ApiResponse<TourismServiceResponse> getServiceDetail(@PathVariable Long id) {
+    @GetMapping("/internal/services/detail/{id}")
+    public ApiResponse<InternalServiceResponse> getServiceDetail(@PathVariable Long id) {
         TourismService serviceEntity = service.getServiceById(id);
-        return ApiResponse.success(serviceMapper.toResponse(serviceEntity));
+        return ApiResponse.success(serviceMapper.toInternalResponse(serviceEntity));
     }
 
     @PostMapping("/destinations/{id}/services")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')") 
-    public ApiResponse<TourismServiceResponse> createService(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PublicTourismServiceDTO> createService(
             @PathVariable Long id, 
             @RequestBody CreateServiceRequest request) {
         
@@ -121,11 +121,11 @@ public class CatalogController {
         
         TourismService savedEntity = service.createService(id, entity);
         
-        return ApiResponse.success(serviceMapper.toResponse(savedEntity));
+        return ApiResponse.success(serviceMapper.toPublicDTO(savedEntity));
     }
 
     @PostMapping(value = "/destinations/{id}/media", consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> uploadDestinationMedia(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
@@ -136,7 +136,7 @@ public class CatalogController {
     }
 
     @PostMapping(value = "/services/{id}/media", consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> uploadServiceMedia(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
@@ -147,7 +147,7 @@ public class CatalogController {
     }
 
     @PostMapping(value = "/destinations/{id}/media/batch", consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<String>> uploadBatchDestinationMedia(
             @PathVariable Long id,
             @RequestParam("files") List<MultipartFile> files) {
@@ -157,12 +157,29 @@ public class CatalogController {
     }
 
     @PostMapping(value = "/services/{id}/media/batch", consumes = "multipart/form-data")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROVIDER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<String>> uploadBatchServiceMedia(
             @PathVariable Long id,
             @RequestParam("files") List<MultipartFile> files) {
         
         List<String> urls = mediaService.addBatchMediaToService(id, files);
         return ApiResponse.success(urls);
+    }
+
+    @PostMapping("/services/{id}/inventory")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> setupInventory(@PathVariable Long id, 
+                                            @RequestParam int total, 
+                                            @RequestParam String start, 
+                                            @RequestParam String end) {
+        inventoryService.initInventory(id, total, LocalDate.parse(start), LocalDate.parse(end));
+        return ApiResponse.success(null, "Inventory setup complete");
+    }
+    
+    @PutMapping("/inventory/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Inventory> updateInventory(@PathVariable Long id, @RequestParam int newTotalStock) {
+        Inventory updated = inventoryService.updateStockForDay(id, newTotalStock);
+        return ApiResponse.success(updated);
     }
 }

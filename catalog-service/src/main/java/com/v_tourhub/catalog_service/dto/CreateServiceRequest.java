@@ -3,6 +3,7 @@ package com.v_tourhub.catalog_service.dto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.Map;
 
 import com.v_tourhub.catalog_service.entity.TourismService;
 
@@ -19,8 +20,7 @@ public class CreateServiceRequest {
     private Boolean availability = true;
     
     @NotNull
-    private Long providerId; 
-    
-    @NotNull
-    private TourismService.ServiceType type; // HOTEL, TOUR, ATTRACTION...
+    private TourismService.ServiceType type; 
+
+    private Map<String, String> attributes;
 }

@@ -39,7 +39,6 @@ public class CatalogService {
 
     private final DestinationRepository destRepo;
     private final TourismServiceRepository serviceRepo;
-    private final CategoryRepository categoryRepo;
     private final InventoryService inventoryService;
 
     @Cacheable(value = "destinations", key = "#id")
@@ -61,7 +60,6 @@ public class CatalogService {
 
         existing.setName(destDetails.getName());
         existing.setDescription(destDetails.getDescription());
-        existing.setCategory(destDetails.getCategory());
 
         if (destDetails.getLocation() != null) {
             if (existing.getLocation() == null) {
@@ -106,10 +104,6 @@ public class CatalogService {
                     predicates.add(cb.like(cb.lower(root.get("location").get("city")),
                             "%" + filters.get("city").toLowerCase() + "%"));
                 }
-                if (filters.containsKey("categoryId")) {
-                    predicates.add(cb.equal(root.get("category").get("id"),
-                            Long.valueOf(filters.get("categoryId"))));
-                }
                 if (filters.containsKey("minRating")) {
                     predicates.add(cb.greaterThanOrEqualTo(root.get("averageRating"),
                             Double.valueOf(filters.get("minRating"))));
@@ -125,11 +119,6 @@ public class CatalogService {
             return serviceRepo.findByType(type, pageable);
         }
         return serviceRepo.findByTypeAndLocation(type, location, pageable);
-    }
-
-    @Cacheable(value = "categories")
-    public List<Category> getAllCategories() {
-        return categoryRepo.findAll();
     }
 
     public TourismService getServiceById(Long id) {

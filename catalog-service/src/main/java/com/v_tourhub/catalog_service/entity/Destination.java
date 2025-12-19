@@ -29,10 +29,6 @@ public class Destination extends BaseEntity {
     @JoinColumn(name = "location_id")
     private Location location;
 
-    @ManyToOne
-    @JoinColumn(name = "category_id")
-    private Category category;
-
     @OneToMany(mappedBy = "destination")
     private List<TourismService> services;
 

@@ -15,17 +15,17 @@ public class BookingEventListener {
     private final InventoryService inventoryService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_CREATED)
-    public void handleBookingCreated(BookingCreatedEvent event) {
+    public void handleBookingCreated(BookingCreatedEvent event) { 
         inventoryService.lockInventory(event);
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_CONFIRMED)
-    public void handleBookingConfirmed(BookingConfirmedEvent event) {
+    public void handleBookingConfirmed(BookingConfirmedEvent event) { 
         inventoryService.commitInventory(event);
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_CANCELLED)
-    public void handleBookingCancelled(BookingCancelledEvent event) {
+    public void handleBookingCancelled(BookingCancelledEvent event) { 
         inventoryService.releaseInventory(event);
     }
 }

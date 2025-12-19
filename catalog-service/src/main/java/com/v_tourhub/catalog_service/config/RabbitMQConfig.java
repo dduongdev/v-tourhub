@@ -9,6 +9,8 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -39,5 +41,8 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(cancelledQueue).to(exchange).with(ROUTING_KEY_CANCELLED);
     }
     
-    @Bean public MessageConverter messageConverter() { return new Jackson2JsonMessageConverter(); }
+    @Bean
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
+    }
 }

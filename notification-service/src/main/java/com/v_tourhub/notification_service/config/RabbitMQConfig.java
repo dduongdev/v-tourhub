@@ -6,11 +6,13 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 @Configuration
 public class RabbitMQConfig {
 
     public static final String EXCHANGE = "booking.exchange";
-    
+
     public static final String QUEUE_EMAIL = "notification.email.queue";
     public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed";
 
@@ -30,7 +32,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter messageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }

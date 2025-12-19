@@ -5,11 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import com.soa.common.event.BookingCancelledEvent;
+import com.soa.common.event.BookingCreatedEvent;
 import com.soa.payment_service.config.RabbitMQConfig;
 import com.soa.payment_service.service.PaymentService;
-
-import java.math.BigDecimal;
-import java.util.Map;
 
 @Component
 @Slf4j
@@ -19,21 +18,22 @@ public class BookingEventListener {
     private final PaymentService paymentService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_PROCESS)
-    public void handleBookingCreated(Map<String, Object> event) {
-        log.info("Received booking.created event: {}", event);
+    public void handleBookingCreated(BookingCreatedEvent event) {
+        log.info("Received BookingCreatedEvent: {}", event);
         try {
-            Long bookingId = Long.valueOf(event.get("bookingId").toString());
-            String userId = null;
-            if (event.get("userId") != null) {
-                 try { userId = String.valueOf(event.get("userId").toString()); } catch (Exception e) {}
-            }
-            
-            BigDecimal amount = new BigDecimal(event.get("amount").toString());
-
-            paymentService.initPayment(bookingId, userId, amount);
-
+            paymentService.initPayment(event.getBookingId(), event.getUserId(), event.getAmount());
         } catch (Exception e) {
             log.error("Error processing booking event", e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_CANCELLED)
+    public void handleBookingCancelled(BookingCancelledEvent event) {
+        log.info("Received booking.cancelled event: {}", event);
+        try {
+            paymentService.handleBookingCancellation(event);
+        } catch (Exception e) {
+            log.error("Error processing booking cancellation event", e);
         }
     }
 }

@@ -135,18 +135,6 @@ services:
     networks:
       - soa-network
 
-  # -----------------------------------------------------------------------------
-  # 7. LOGGING & TRACING (Optional for Phase 1 but good to have)
-  # -----------------------------------------------------------------------------
-  # Zipkin (Distributed Tracing)
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: soa-zipkin
-    ports:
-      - "9411:9411"
-    networks:
-      - soa-network
-
   maildev:
     image: maildev/maildev
     container_name: soa-maildev

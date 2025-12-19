@@ -81,7 +81,7 @@ public class InventoryService {
                     .orElseThrow(() -> new ResourceNotFoundException("Service", "id", event.getServiceId()));
 
             List<LocalDate> datesToLock = getDatesForServiceType(
-                    service.getServiceType(), event.getCheckIn(), event.getCheckOut());
+                    service.getType(), event.getCheckIn(), event.getCheckOut());
 
             List<Inventory> inventories = inventoryRepo.findByServiceIdAndDatesIn(event.getServiceId(), datesToLock);
 
