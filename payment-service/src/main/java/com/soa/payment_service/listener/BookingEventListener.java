@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingCreatedEvent;
+import com.soa.common.event.BookingFailedEvent;
 import com.soa.payment_service.config.RabbitMQConfig;
 import com.soa.payment_service.service.PaymentService;
 
@@ -34,6 +35,16 @@ public class BookingEventListener {
             paymentService.handleBookingCancellation(event);
         } catch (Exception e) {
             log.error("Error processing booking cancellation event", e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_FAILED)
+    public void handleBookingFailed(BookingFailedEvent event) {
+        log.info("Received booking.failed event: {}", event);
+        try {
+            paymentService.cancelPaymentForBooking(event.getBookingId());
+        } catch (Exception e) {
+            log.error("Error processing booking failed event", e);
         }
     }
 }

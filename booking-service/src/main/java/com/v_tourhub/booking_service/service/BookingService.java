@@ -5,6 +5,7 @@ import com.soa.common.dto.InternalServiceResponse;
 import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingCreatedEvent;
+import com.soa.common.event.BookingFailedEvent;
 import com.soa.common.event.InventoryLockFailedEvent;
 import com.soa.common.exception.BusinessException;
 import com.soa.common.exception.ResourceNotFoundException;
@@ -178,6 +179,8 @@ public class BookingService {
                 .checkIn(booking.getCheckInDate())
                 .checkOut(booking.getCheckOutDate())
                 .quantity(booking.getQuantity()) 
+                .customerEmail(booking.getCustomerEmail())
+                .serviceName(booking.getServiceName())
                 .build();
 
         rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
@@ -260,7 +263,9 @@ public class BookingService {
                     .previousStatus(oldStatus)
                     .checkIn(booking.getCheckInDate())
                     .checkOut(booking.getCheckOutDate())
-                    .quantity(booking.getQuantity()) 
+                    .quantity(booking.getQuantity())
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
                     .build();
 
             rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, ROUTING_KEY_CANCELLED, event);
@@ -304,6 +309,8 @@ public class BookingService {
                 .checkIn(booking.getCheckInDate())
                 .checkOut(booking.getCheckOutDate())
                 .quantity(booking.getQuantity())
+                .customerEmail(booking.getCustomerEmail())
+                .serviceName(booking.getServiceName())
                 .build();
 
         rabbitTemplate.convertAndSend("booking.exchange", "booking.cancelled", event);
@@ -325,18 +332,17 @@ public class BookingService {
             booking.setStatus(BookingStatus.CANCELLED);
             bookingRepo.save(booking);
 
-            BookingCancelledEvent cancelledEvent = BookingCancelledEvent.builder()
+            BookingFailedEvent failedEvent = BookingFailedEvent.builder()
                     .bookingId(booking.getId())
-                    .serviceId(booking.getServiceId())
                     .userId(booking.getUserId())
+                    .serviceId(booking.getServiceId())
                     .reason("Inventory Lock Failed: " + event.getReason())
-                    .previousStatus("PENDING_PAYMENT")
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
                     .checkIn(booking.getCheckInDate())
-                    .checkOut(booking.getCheckOutDate())
-                    .quantity(booking.getQuantity())
                     .build();
             
-            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, "booking.cancelled", cancelledEvent);
+            rabbitTemplate.convertAndSend(BOOKING_EXCHANGE, "booking.failed", failedEvent);
             log.info("Published BookingCancelledEvent due to inventory lock failure for Booking ID {}", booking.getId());
         }
     }

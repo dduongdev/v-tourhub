@@ -117,9 +117,7 @@ public class CatalogController {
             @PathVariable Long id, 
             @RequestBody CreateServiceRequest request) {
         
-        TourismService entity = serviceMapper.toEntity(request);
-        
-        TourismService savedEntity = service.createService(id, entity);
+        TourismService savedEntity = service.createService(id, request);
         
         return ApiResponse.success(serviceMapper.toPublicDTO(savedEntity));
     }

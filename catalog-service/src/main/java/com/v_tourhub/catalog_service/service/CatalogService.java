@@ -2,11 +2,13 @@ package com.v_tourhub.catalog_service.service;
 
 import com.soa.common.dto.ApiResponse;
 import com.soa.common.exception.ResourceNotFoundException;
+import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
 import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Location;
 import com.v_tourhub.catalog_service.entity.TourismService;
+import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.repository.CategoryRepository;
 import com.v_tourhub.catalog_service.repository.DestinationRepository;
 import com.v_tourhub.catalog_service.repository.TourismServiceRepository;
@@ -40,6 +42,7 @@ public class CatalogService {
     private final DestinationRepository destRepo;
     private final TourismServiceRepository serviceRepo;
     private final InventoryService inventoryService;
+    private final ServiceMapper serviceMapper;
 
     @Cacheable(value = "destinations", key = "#id")
     public Destination getDestinationById(Long id) {
@@ -127,41 +130,31 @@ public class CatalogService {
     }
 
     @Transactional
-    @CacheEvict(value = "destinations", key = "#destinationId") 
-    public TourismService createService(Long destinationId, TourismService service) {
+    @CacheEvict(value = "destinations", key = "#destinationId")
+    public TourismService createService(Long destinationId, CreateServiceRequest request) {
+        // 1. Tìm Destination
         Destination dest = getDestinationById(destinationId);
+        
+        // 2. Convert DTO -> Entity (Mapper đã xử lý name, desc, attributes...)
+        TourismService service = serviceMapper.toEntity(request);
         service.setDestination(dest);
 
-        // 2. Lưu service xuống DB để lấy ID
+        // 3. Lưu Service để lấy ID
         TourismService savedService = serviceRepo.save(service);
 
-        // 3. [QUAN TRỌNG] Gọi InventoryService để khởi tạo kho
-        // Mặc định: Tạo kho 10 slot/phòng cho 1 năm tới.
-        // Trong thực tế, có thể cần một API riêng để Admin cấu hình số lượng này.
-        int defaultStock = 10;
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = startDate.plusYears(1);
-
-        inventoryService.initInventory(savedService.getId(), defaultStock, startDate, endDate);
+        // 4. [LOGIC MỚI] Khởi tạo kho dựa trên request
+        if (request.getInventory() != null) {
+            CreateServiceRequest.InventoryConfig invConfig = request.getInventory();
+            inventoryService.initInventory(
+                savedService.getId(), 
+                invConfig.getTotalStock(), 
+                invConfig.getStartDate(), 
+                invConfig.getEndDate()
+            );
+        } else {
+            inventoryService.initInventory(savedService.getId(), 10, LocalDate.now(), LocalDate.now().plusYears(1));
+        }
 
         return savedService;
-    }
-
-    @PostMapping("/services/{id}/inventory")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> setupInventory(@PathVariable Long id, 
-                                            @RequestParam int total, 
-                                            @RequestParam String start, 
-                                            @RequestParam String end) {
-        inventoryService.initInventory(id, total, LocalDate.parse(start), LocalDate.parse(end));
-        return ApiResponse.success(null, "Inventory setup complete");
-    }
-    
-    // (THÊM MỚI) Endpoint để cập nhật kho của một ngày cụ thể
-    @PutMapping("/inventory/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Inventory> updateInventory(@PathVariable Long id, @RequestParam int newTotalStock) {
-        Inventory updated = inventoryService.updateStockForDay(id, newTotalStock);
-        return ApiResponse.success(updated);
     }
 }

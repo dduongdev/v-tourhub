@@ -88,4 +88,17 @@ public class RabbitMQConfig {
     public Binding bindingInventoryLockFailed(Queue inventoryLockFailedQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(inventoryLockFailedQueue).to(bookingExchange).with(ROUTING_KEY_INVENTORY_LOCK_FAILED);
     }
+
+    public static final String QUEUE_BOOKING_FAILED_PAYMENT = "payment.booking.failed.queue";
+    public static final String ROUTING_KEY_BOOKING_FAILED = "booking.failed";
+
+    @Bean
+    public Queue bookingFailedQueueForPayment() {
+        return new Queue(QUEUE_BOOKING_FAILED_PAYMENT, true);
+    }
+    
+    @Bean
+    public Binding bindingBookingFailedForPayment(Queue bookingFailedQueueForPayment, TopicExchange exchange) {
+        return BindingBuilder.bind(bookingFailedQueueForPayment).to(exchange).with(ROUTING_KEY_BOOKING_FAILED);
+    }
 }

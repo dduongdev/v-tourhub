@@ -239,4 +239,21 @@ public class PaymentService {
             }
         });
     }
+
+    @Transactional
+    public void cancelPaymentForBooking(Long bookingId) {
+        // 1. Tìm payment tương ứng
+        paymentRepo.findByBookingId(bookingId).ifPresent(payment -> {
+            
+            // 2. Chỉ xử lý nếu payment đang chờ
+            if (payment.getStatus() == PaymentStatus.PENDING) {
+                payment.setStatus(PaymentStatus.FAILED); // Chuyển sang FAILED
+                paymentRepo.save(payment);
+                log.info("Payment for Booking ID {} was cancelled due to booking failure.", bookingId);
+            } else {
+                log.warn("Received booking failure event for Booking ID {}, but payment status is already {}. No action taken.", 
+                         bookingId, payment.getStatus());
+            }
+        });
+    }
 }

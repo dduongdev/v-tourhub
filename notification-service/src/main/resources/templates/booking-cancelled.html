@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Booking Cancellation Confirmation</title>
+    <style>
+        .header { background-color: #ff9800; color: white; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>Xác nhận Hủy Đặt chỗ</h2>
+    </div>
+    <div class="content">
+        <p>Xin chào quý khách,</p>
+        <p>Yêu cầu hủy đơn hàng <b th:text="${event.bookingId}"></b> của bạn đã được xử lý thành công.</p>
+        
+        <p><b>Lý do hủy:</b> <i th:text="${event.reason}">Yêu cầu từ người dùng.</i></p>
+        
+        <p th:if="${event.previousStatus == 'CONFIRMED'}">
+            Nếu bạn đã thanh toán cho đơn hàng này, yêu cầu hoàn tiền sẽ được xử lý trong vòng 3-5 ngày làm việc.
+        </p>
+        
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của V-TourHub!</p>
+    </div>
+    <div class="footer">
+        &copy; 2025 V-TourHub System.
+    </div>
+</div>
+</body>
+</html>

@@ -35,4 +35,30 @@ public class RabbitMQConfig {
     public MessageConverter messageConverter(ObjectMapper objectMapper) {
         return new Jackson2JsonMessageConverter(objectMapper);
     }
+
+    public static final String QUEUE_CANCELLATION_EMAIL = "notification.cancellation.email.queue";
+    public static final String ROUTING_KEY_CANCELLED = "booking.cancelled";
+
+    @Bean
+    public Queue cancellationEmailQueue() {
+        return new Queue(QUEUE_CANCELLATION_EMAIL, true);
+    }
+    
+    @Bean
+    public Binding bindingCancellationEmail(Queue cancellationEmailQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(cancellationEmailQueue).to(bookingExchange).with(ROUTING_KEY_CANCELLED);
+    }
+
+    public static final String QUEUE_BOOKING_FAILED_EMAIL = "notification.booking.failed.email.queue";
+    public static final String ROUTING_KEY_BOOKING_FAILED = "booking.failed";
+
+    @Bean
+    public Queue bookingFailedEmailQueue() {
+        return new Queue(QUEUE_BOOKING_FAILED_EMAIL, true);
+    }
+    
+    @Bean
+    public Binding bindingBookingFailedEmail(Queue bookingFailedEmailQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(bookingFailedEmailQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_FAILED);
+    }
 }

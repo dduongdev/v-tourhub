@@ -5,11 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
+import com.soa.common.event.BookingFailedEvent;
 import com.v_tourhub.notification_service.config.RabbitMQConfig;
 import com.v_tourhub.notification_service.service.EmailService;
-
-import java.util.Map;
 
 @Component
 @Slf4j
@@ -26,6 +26,25 @@ public class NotificationEventListener {
             emailService.sendBookingConfirmation(event);
         } else {
             log.warn("No customer email found in event, skipping email sending.");
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_CANCELLATION_EMAIL)
+    public void handleBookingCancelled(BookingCancelledEvent event) {
+        log.info("Received booking cancelled event: {}", event);
+        if (event.getCustomerEmail() != null) {
+            emailService.sendBookingCancellationEmail(event);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_FAILED_EMAIL)
+    public void handleBookingFailed(BookingFailedEvent event) {
+        log.info("Received booking.failed event for notification: {}", event);
+        
+        if (event.getCustomerEmail() != null && !event.getCustomerEmail().isEmpty()) {
+            emailService.sendBookingFailureEmail(event);
+        } else {
+            log.warn("No customer email in booking.failed event, skipping email sending.");
         }
     }
 }

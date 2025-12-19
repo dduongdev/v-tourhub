@@ -37,18 +37,63 @@ spring:
           uri: lb://catalog-service
           predicates:
             - Path=/api/catalog/**
+          default-filters:
+            # Cấu hình Retry Filter
+            - name: Retry
+              args:
+                retries: 3 # Thử lại tối đa 3 lần
+                # Các phương thức HTTP sẽ được retry
+                methods: GET 
+                # Các mã lỗi sẽ kích hoạt retry
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                # Thời gian chờ giữa các lần thử lại (Exponential Backoff)
+                backoff:
+                  firstBackoff: 100ms # Lần đầu đợi 100ms
+                  maxBackoff: 500ms   # Tối đa đợi 500ms
+                  factor: 2           # Nhân đôi thời gian chờ sau mỗi lần
+                  basedOnPreviousValue: false
 
         # --- Booking Service ---
         - id: booking-service
           uri: lb://booking-service
           predicates:
             - Path=/api/bookings/**
+          default-filters:
+            # Cấu hình Retry Filter
+            - name: Retry
+              args:
+                retries: 3 # Thử lại tối đa 3 lần
+                # Các phương thức HTTP sẽ được retry
+                methods: GET 
+                # Các mã lỗi sẽ kích hoạt retry
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                # Thời gian chờ giữa các lần thử lại (Exponential Backoff)
+                backoff:
+                  firstBackoff: 100ms # Lần đầu đợi 100ms
+                  maxBackoff: 500ms   # Tối đa đợi 500ms
+                  factor: 2           # Nhân đôi thời gian chờ sau mỗi lần
+                  basedOnPreviousValue: false
 
         # --- User Profile Service ---
         - id: userprofile-service
           uri: lb://userprofile-service
           predicates:
             - Path=/api/users/**
+          default-filters:
+            # Cấu hình Retry Filter
+            - name: Retry
+              args:
+                retries: 3 # Thử lại tối đa 3 lần
+                # Các phương thức HTTP sẽ được retry
+                methods: GET 
+                # Các mã lỗi sẽ kích hoạt retry
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                # Thời gian chờ giữa các lần thử lại (Exponential Backoff)
+                backoff:
+                  firstBackoff: 100ms # Lần đầu đợi 100ms
+                  maxBackoff: 500ms   # Tối đa đợi 500ms
+                  factor: 2           # Nhân đôi thời gian chờ sau mỗi lần
+                  basedOnPreviousValue: false
 
         # --- Payment Service ---
         - id: payment-service
@@ -61,6 +106,21 @@ spring:
           uri: lb://notification-service
           predicates:
             - Path=/api/notifications/**
+          default-filters:
+            # Cấu hình Retry Filter
+            - name: Retry
+              args:
+                retries: 3 # Thử lại tối đa 3 lần
+                # Các phương thức HTTP sẽ được retry
+                methods: GET 
+                # Các mã lỗi sẽ kích hoạt retry
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                # Thời gian chờ giữa các lần thử lại (Exponential Backoff)
+                backoff:
+                  firstBackoff: 100ms # Lần đầu đợi 100ms
+                  maxBackoff: 500ms   # Tối đa đợi 500ms
+                  factor: 2           # Nhân đôi thời gian chờ sau mỗi lần
+                  basedOnPreviousValue: false
 
   # 3. Cấu hình Security (Kết nối Keycloak)
   security:

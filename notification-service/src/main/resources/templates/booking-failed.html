@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Booking Failed Notification</title>
+    <style>
+        /* (Copy style từ template success sang) */
+        .header { background-color: #f44336; /* Màu đỏ */ color: white;  }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>Đặt chỗ không thành công</h2>
+    </div>
+    <div class="content">
+        <p>Xin chào quý khách,</p>
+        <p>Chúng tôi rất tiếc phải thông báo rằng yêu cầu đặt chỗ của bạn cho dịch vụ 
+           <b th:text="${event.serviceName}">[Tên dịch vụ]</b> vào ngày 
+           <b th:text="${event.checkIn}">[Ngày]</b> đã không thành công.</p>
+        
+        <p style="color: #d32f2f;"><b>Lý do:</b> <i th:text="${event.reason}">Hết phòng/vé.</i></p>
+        
+        <p>Bạn không bị trừ bất kỳ khoản phí nào cho giao dịch này. Vui lòng thử lại với các lựa chọn khác.</p>
+        <p>Xin chân thành cảm ơn!</p>
+    </div>
+    <div class="footer">
+        &copy; 2025 V-TourHub System.
+    </div>
+</div>
+</body>
+</html>

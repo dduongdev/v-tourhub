@@ -154,7 +154,6 @@ services:
     build:
       context: .                      # Ngữ cảnh là thư mục gốc
       dockerfile: api-gateway/Dockerfile
-    container_name: soa-api-gateway
     ports:
       - "8000:8000"
     environment:
@@ -180,7 +179,8 @@ services:
     build:
       context: .
       dockerfile: userprofile-service/Dockerfile
-    container_name: soa-userprofile
+    deploy:
+      replicas: 2
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/user_profile_db
@@ -217,7 +217,8 @@ services:
     build:
       context: .
       dockerfile: catalog-service/Dockerfile
-    container_name: soa-catalog
+    deploy:
+      replicas: 3
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/catalog_db
@@ -256,7 +257,8 @@ services:
     build:
       context: .
       dockerfile: booking-service/Dockerfile
-    container_name: soa-booking
+    deploy:
+      replicas: 4
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/booking_db
@@ -291,7 +293,8 @@ services:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
-    container_name: soa-payment
+    deploy:
+      replicas: 2
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_db
@@ -322,7 +325,8 @@ services:
     build:
       context: .
       dockerfile: notification-service/Dockerfile
-    container_name: soa-notification
+    deploy:
+      replicas: 2
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/notification_db

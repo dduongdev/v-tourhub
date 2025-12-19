@@ -51,4 +51,17 @@ public class RabbitMQConfig {
     public Binding bindingBookingCancelled(Queue bookingCancelledQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(bookingCancelledQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_CANCELLED);
     }
+
+    public static final String QUEUE_BOOKING_FAILED = "payment.booking.failed.queue";
+    public static final String ROUTING_KEY_BOOKING_FAILED = "booking.failed";
+
+    @Bean
+    public Queue bookingFailedQueue() {
+        return new Queue(QUEUE_BOOKING_FAILED, true);
+    }
+
+    @Bean
+    public Binding bindingBookingFailed(Queue bookingFailedQueue, TopicExchange exchange) {
+        return BindingBuilder.bind(bookingFailedQueue).to(exchange).with(ROUTING_KEY_BOOKING_FAILED);
+    }
 }
