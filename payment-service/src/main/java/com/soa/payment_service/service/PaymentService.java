@@ -7,7 +7,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.nimbusds.jose.util.Resource;
 import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.PaymentCompletedEvent;
 import com.soa.common.event.PaymentFailedEvent;
@@ -23,7 +22,6 @@ import com.soa.payment_service.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;

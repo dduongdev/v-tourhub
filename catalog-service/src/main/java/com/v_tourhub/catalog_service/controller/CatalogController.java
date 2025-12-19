@@ -4,7 +4,6 @@ import com.soa.common.dto.ApiResponse;
 import com.soa.common.dto.InternalServiceResponse;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
 import com.v_tourhub.catalog_service.dto.PublicTourismServiceDTO;
-import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Media;

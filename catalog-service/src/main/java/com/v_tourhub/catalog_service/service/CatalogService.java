@@ -1,15 +1,11 @@
 package com.v_tourhub.catalog_service.service;
 
-import com.soa.common.dto.ApiResponse;
 import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
-import com.v_tourhub.catalog_service.entity.Category;
 import com.v_tourhub.catalog_service.entity.Destination;
-import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Location;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.mapper.ServiceMapper;
-import com.v_tourhub.catalog_service.repository.CategoryRepository;
 import com.v_tourhub.catalog_service.repository.DestinationRepository;
 import com.v_tourhub.catalog_service.repository.TourismServiceRepository;
 
@@ -21,14 +17,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
 import java.util.ArrayList;

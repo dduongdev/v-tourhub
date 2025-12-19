@@ -15,8 +15,6 @@ import com.soa.common.event.BookingFailedEvent;
 import com.v_tourhub.notification_service.entity.NotificationLog;
 import com.v_tourhub.notification_service.repository.NotificationLogRepository;
 
-import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
