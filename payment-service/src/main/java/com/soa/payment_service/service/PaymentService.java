@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.soa.common.event.BookingCancelledEvent;
+import com.soa.common.event.BookingReadyForPaymentEvent;
 import com.soa.common.event.PaymentCompletedEvent;
 import com.soa.common.event.PaymentFailedEvent;
 import com.soa.common.exception.BusinessException;
@@ -33,28 +34,23 @@ import java.util.*;
 public class PaymentService {
 
     private final PaymentRepository paymentRepo;
-    private final RabbitTemplate rabbitTemplate;
     private final VNPayConfig vnpayConfig; 
-
-    @Transactional
-    public void initPayment(Long bookingId, String userId, BigDecimal amount) {
-        if (paymentRepo.findByBookingId(bookingId).isPresent()) return;
-        Payment payment = Payment.builder()
-                .bookingId(bookingId)
-                .userId(userId)
-                .amount(amount)
-                .currency("VND")
-                .status(PaymentStatus.PENDING)
-                .build();
-        paymentRepo.save(payment);
-    }
+    private final EventPublisherService eventPublisher;
 
     public String createVnPayUrl(Long bookingId, HttpServletRequest request) {
         Payment payment = paymentRepo.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
+
+        if (payment.getStatus() != PaymentStatus.CONFIRMED) {
+            throw new BusinessException("Payment is not ready or has been processed. Current status: " + payment.getStatus());
+        }
+
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
             throw new BusinessException("Booking already paid");
+        }
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            throw new BusinessException("Payment has been cancelled for this booking");
         }
 
         long amount = payment.getAmount().longValue() * 100;
@@ -132,7 +128,8 @@ public class PaymentService {
 
         Payment payment = paymentRepo.findByBookingId(Long.valueOf(bookingId))
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
-        if (payment.getStatus() == PaymentStatus.COMPLETED || payment.getStatus() == PaymentStatus.FAILED) {
+        if (payment.getStatus() != PaymentStatus.CONFIRMED) {
+            log.warn("Payment for booking {} already processed. Current status: {}", bookingId, payment.getStatus());
             return payment;
         }
 
@@ -168,8 +165,9 @@ public class PaymentService {
     }
 
     private void publishPaymentEvent(Payment payment, String routingKey, String statusMsg) {
+        Object event;
         if ("SUCCESS".equals(statusMsg)) {
-            PaymentCompletedEvent event = PaymentCompletedEvent.builder()
+            event = PaymentCompletedEvent.builder()
                     .bookingId(payment.getBookingId())
                     .paymentId(payment.getId())
                     .userId(payment.getUserId())
@@ -177,15 +175,20 @@ public class PaymentService {
                     .transactionId(payment.getGatewayTransactionId())
                     .paymentMethod(payment.getMethod() != null ? payment.getMethod().name() : null)
                     .build();
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
         } else {
-            PaymentFailedEvent event = PaymentFailedEvent.builder()
+            event = PaymentFailedEvent.builder()
                     .bookingId(payment.getBookingId())
                     .userId(payment.getUserId())
                     .reason(statusMsg)
                     .build();
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, event);
         }
+
+        eventPublisher.saveEventToOutbox(
+            "Payment", 
+            payment.getId().toString(), 
+            routingKey,
+            event
+        );
         log.info("Published {} event for Booking ID {}", routingKey, payment.getBookingId());
     }
 
@@ -227,8 +230,8 @@ public class PaymentService {
     public void handleBookingCancellation(BookingCancelledEvent event) {
         paymentRepo.findByBookingId(event.getBookingId()).ifPresent(payment -> {
             
-            if (payment.getStatus() == PaymentStatus.PENDING) {
-                payment.setStatus(PaymentStatus.FAILED);
+            if (payment.getStatus() == PaymentStatus.CONFIRMED) {
+                payment.setStatus(PaymentStatus.CANCELLED);
                 paymentRepo.save(payment);
                 log.info("Payment for Booking ID {} has been cancelled.", event.getBookingId());
 
@@ -240,12 +243,10 @@ public class PaymentService {
 
     @Transactional
     public void cancelPaymentForBooking(Long bookingId) {
-        // 1. Tìm payment tương ứng
         paymentRepo.findByBookingId(bookingId).ifPresent(payment -> {
             
-            // 2. Chỉ xử lý nếu payment đang chờ
-            if (payment.getStatus() == PaymentStatus.PENDING) {
-                payment.setStatus(PaymentStatus.FAILED); // Chuyển sang FAILED
+            if (payment.getStatus() == PaymentStatus.CONFIRMED) {
+                payment.setStatus(PaymentStatus.CANCELLED); 
                 paymentRepo.save(payment);
                 log.info("Payment for Booking ID {} was cancelled due to booking failure.", bookingId);
             } else {
@@ -253,5 +254,24 @@ public class PaymentService {
                          bookingId, payment.getStatus());
             }
         });
+    }
+
+    @Transactional
+    public void createAndConfirmPayment(BookingReadyForPaymentEvent event) {
+        if (paymentRepo.findByBookingId(event.getBookingId()).isPresent()) {
+            log.warn("Payment already exists for booking {}", event.getBookingId());
+            return;
+        }
+
+        Payment payment = Payment.builder()
+                .bookingId(event.getBookingId())
+                .userId(event.getUserId())
+                .amount(event.getAmount())
+                .currency(event.getCurrency())
+                .status(PaymentStatus.CONFIRMED) 
+                .build();
+        
+        paymentRepo.save(payment);
+        log.info("Created and Confirmed payment for booking {}", event.getBookingId());
     }
 }

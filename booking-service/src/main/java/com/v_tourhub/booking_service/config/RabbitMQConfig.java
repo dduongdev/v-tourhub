@@ -28,6 +28,7 @@ public class RabbitMQConfig {
 
     public static final String QUEUE_INVENTORY_LOCK_FAILED = "booking.inventory.lock.failed.queue";
     public static final String ROUTING_KEY_INVENTORY_LOCK_FAILED = "inventory.lock.failed";
+    public static final String ROUTING_KEY_READY_FOR_PAYMENT = "booking.ready_for_payment";
 
     @Bean
     public TopicExchange bookingExchange() {
@@ -86,7 +87,8 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding bindingInventoryLockFailed(Queue inventoryLockFailedQueue, TopicExchange bookingExchange) {
-        return BindingBuilder.bind(inventoryLockFailedQueue).to(bookingExchange).with(ROUTING_KEY_INVENTORY_LOCK_FAILED);
+        return BindingBuilder.bind(inventoryLockFailedQueue).to(bookingExchange)
+                .with(ROUTING_KEY_INVENTORY_LOCK_FAILED);
     }
 
     public static final String QUEUE_BOOKING_FAILED_PAYMENT = "payment.booking.failed.queue";
@@ -96,9 +98,23 @@ public class RabbitMQConfig {
     public Queue bookingFailedQueueForPayment() {
         return new Queue(QUEUE_BOOKING_FAILED_PAYMENT, true);
     }
-    
+
     @Bean
     public Binding bindingBookingFailedForPayment(Queue bookingFailedQueueForPayment, TopicExchange exchange) {
         return BindingBuilder.bind(bookingFailedQueueForPayment).to(exchange).with(ROUTING_KEY_BOOKING_FAILED);
+    }
+
+    public static final String QUEUE_INVENTORY_LOCK_SUCCESSFUL = "booking.inventory.lock.successful.queue";
+    public static final String ROUTING_KEY_INVENTORY_LOCK_SUCCESSFUL = "inventory.lock.successful";
+
+    @Bean
+    public Queue inventoryLockSuccessfulQueue() {
+        return new Queue(QUEUE_INVENTORY_LOCK_SUCCESSFUL, true);
+    }
+
+    @Bean
+    public Binding bindingInventoryLockSuccessful(Queue inventoryLockSuccessfulQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(inventoryLockSuccessfulQueue).to(bookingExchange)
+                .with(ROUTING_KEY_INVENTORY_LOCK_SUCCESSFUL);
     }
 }

@@ -6,8 +6,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import com.soa.common.event.BookingCancelledEvent;
-import com.soa.common.event.BookingCreatedEvent;
 import com.soa.common.event.BookingFailedEvent;
+import com.soa.common.event.BookingReadyForPaymentEvent;
 import com.soa.payment_service.config.RabbitMQConfig;
 import com.soa.payment_service.service.PaymentService;
 
@@ -18,14 +18,10 @@ public class BookingEventListener {
 
     private final PaymentService paymentService;
 
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_PROCESS)
-    public void handleBookingCreated(BookingCreatedEvent event) {
-        log.info("Received BookingCreatedEvent: {}", event);
-        try {
-            paymentService.initPayment(event.getBookingId(), event.getUserId(), event.getAmount());
-        } catch (Exception e) {
-            log.error("Error processing booking event", e);
-        }
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_READY_FOR_PAYMENT)
+    public void handleBookingReadyForPayment(BookingReadyForPaymentEvent event) {
+        log.info("Received booking.ready_for_payment event: {}", event);
+        paymentService.createAndConfirmPayment(event);
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_CANCELLED)

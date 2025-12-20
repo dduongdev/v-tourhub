@@ -25,6 +25,9 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_CREATED = "booking.created";
     public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed";
     public static final String ROUTING_KEY_CANCELLED = "booking.cancelled";
+    public static final String ROUTING_KEY_INVENTORY_LOCK_FAILED = "inventory.lock.failed";
+
+    public static final String ROUTING_KEY_INVENTORY_LOCK_SUCCESSFUL = "inventory.lock.successful";
 
     @Bean public TopicExchange bookingExchange() { return new TopicExchange(EXCHANGE); }
     @Bean public Queue createdQueue() { return new Queue(QUEUE_BOOKING_CREATED, true); }

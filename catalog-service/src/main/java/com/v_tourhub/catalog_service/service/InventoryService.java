@@ -4,11 +4,16 @@ import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingCreatedEvent;
 import com.soa.common.event.InventoryLockFailedEvent;
+import com.soa.common.event.InventoryLockSuccessfulEvent;
 import com.soa.common.exception.BusinessException;
 import com.soa.common.exception.ResourceNotFoundException;
+import com.v_tourhub.catalog_service.config.RabbitMQConfig;
 import com.v_tourhub.catalog_service.entity.Inventory;
+import com.v_tourhub.catalog_service.entity.InventoryReservation;
+import com.v_tourhub.catalog_service.entity.OutboxEvent;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.repository.InventoryRepository;
+import com.v_tourhub.catalog_service.repository.InventoryReservationRepository;
 import com.v_tourhub.catalog_service.repository.TourismServiceRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -16,11 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +38,8 @@ public class InventoryService {
     private final InventoryRepository inventoryRepo;
     private final TourismServiceRepository serviceRepo;
     private final RabbitTemplate rabbitTemplate;
+    private final InventoryReservationRepository reservationRepo;
+    private final EventPublisherService eventPublisherService;
 
     // Constants
     private static final String BOOKING_EXCHANGE = "booking.exchange";
@@ -40,35 +50,65 @@ public class InventoryService {
      */
     @Transactional
     public void initInventory(Long serviceId, int totalStock, LocalDate startDate, LocalDate endDate) {
+        if (totalStock <= 0) {
+            throw new IllegalArgumentException("Total stock must be greater than 0");
+        }
+
         TourismService service = serviceRepo.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service", "id", serviceId));
 
-        List<Inventory> inventoriesToSave = new ArrayList<>();
-        LocalDate currentDate = startDate;
-
-        while (!currentDate.isAfter(endDate)) {
-            final LocalDate finalCurrentDate = currentDate; // Cần final để dùng trong lambda
-
-            // Chỉ tạo mới nếu ngày đó chưa có trong DB
-            inventoryRepo.findByServiceIdAndDate(serviceId, currentDate).ifPresentOrElse(
-                    (existingInv) -> {
-                        /* Đã tồn tại, có thể log hoặc update totalStock nếu muốn */ },
-                    () -> {
-                        Inventory newInv = new Inventory();
-                        newInv.setService(service);
-                        newInv.setDate(finalCurrentDate);
-                        newInv.setTotalStock(totalStock);
-                        newInv.setBookedStock(0);
-                        newInv.setLockedStock(0);
-                        inventoriesToSave.add(newInv);
-                    });
-            currentDate = currentDate.plusDays(1);
+        // 1️⃣ Build danh sách ngày
+        List<LocalDate> dates = new ArrayList<>();
+        LocalDate d = startDate;
+        while (!d.isAfter(endDate)) {
+            dates.add(d);
+            d = d.plusDays(1);
         }
 
-        if (!inventoriesToSave.isEmpty()) {
-            inventoryRepo.saveAll(inventoriesToSave);
-            log.info("Initialized {} inventory records for Service ID {}", inventoriesToSave.size(), serviceId);
+        // 2️⃣ Load toàn bộ inventory trong range (1 QUERY)
+        List<Inventory> existingInventories = inventoryRepo.findByServiceIdAndDatesIn(serviceId, dates);
+
+        Map<LocalDate, Inventory> inventoryMap = existingInventories.stream()
+                .collect(Collectors.toMap(Inventory::getDate, inv -> inv));
+
+        List<Inventory> toSave = new ArrayList<>();
+
+        // 3️⃣ Upsert từng ngày
+        for (LocalDate date : dates) {
+
+            Inventory inv = inventoryMap.get(date);
+
+            if (inv == null) {
+                // 👉 INIT
+                Inventory newInv = new Inventory();
+                newInv.setService(service);
+                newInv.setDate(date);
+                newInv.setTotalStock(totalStock);
+                newInv.setBookedStock(0);
+                newInv.setLockedStock(0);
+                toSave.add(newInv);
+            } else {
+                // 👉 UPDATE
+                int usedStock = inv.getBookedStock() + inv.getLockedStock();
+
+                if (usedStock > totalStock) {
+                    throw new BusinessException(
+                            String.format(
+                                    "Cannot reduce total stock on %s. Used=%d, NewTotal=%d",
+                                    date, usedStock, totalStock));
+                }
+
+                inv.setTotalStock(totalStock);
+                toSave.add(inv);
+            }
         }
+
+        // 4️⃣ Save batch
+        inventoryRepo.saveAll(toSave);
+
+        log.info(
+                "Upserted inventory for Service ID {}, dates {} -> {}, totalStock={}",
+                serviceId, startDate, endDate, totalStock);
     }
 
     /**
@@ -77,31 +117,45 @@ public class InventoryService {
     @Transactional(rollbackFor = Exception.class)
     public void lockInventory(BookingCreatedEvent event) {
         try {
-            TourismService service = serviceRepo.findById(event.getServiceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Service", "id", event.getServiceId()));
-
-            List<LocalDate> datesToLock = getDatesForServiceType(
-                    service.getType(), event.getCheckIn(), event.getCheckOut());
-
-            List<Inventory> inventories = inventoryRepo.findByServiceIdAndDatesIn(event.getServiceId(), datesToLock);
-
-            if (inventories.size() != datesToLock.size()) {
-                throw new BusinessException("Lịch chưa được thiết lập đầy đủ cho các ngày bạn chọn.");
+            // 1. Check Idempotency: Nếu bookingId này đã được lock rồi thì bỏ qua
+            if (reservationRepo.existsByBookingId(event.getBookingId())) {
+                log.warn("Booking {} already has a reservation. Skipping lock.", event.getBookingId());
+                return;
             }
 
-            for (Inventory inv : inventories) {
-                if (inv.getAvailableStock() < event.getQuantity()) {
-                    throw new BusinessException("Hết phòng/vé vào ngày: " + inv.getDate());
+            List<LocalDate> dates = getDatesForServiceType(null, event.getCheckIn(), event.getCheckOut());
+
+            for (LocalDate date : dates) {
+                int rowsAffected = inventoryRepo.atomicLock(event.getServiceId(), date, event.getQuantity());
+
+                if (rowsAffected == 0) {
+                    throw new BusinessException("Hết phòng/vé vào ngày " + date);
                 }
-                inv.setLockedStock(inv.getLockedStock() + event.getQuantity());
-            }
 
-            inventoryRepo.saveAll(inventories);
-            log.info("Locked inventory for Booking ID {}", event.getBookingId());
+                InventoryReservation res = InventoryReservation.builder()
+                        .bookingId(event.getBookingId())
+                        .serviceId(event.getServiceId())
+                        .date(date)
+                        .quantity(event.getQuantity())
+                        .status(InventoryReservation.ReservationStatus.LOCKED)
+                        .build();
+                reservationRepo.save(res);
+
+                InventoryLockSuccessfulEvent successEvent = InventoryLockSuccessfulEvent.builder()
+                        .bookingId(event.getBookingId())
+                        .build();
+
+                eventPublisherService.saveEventToOutbox(
+                        "Inventory",
+                        event.getBookingId().toString(),
+                        RabbitMQConfig.ROUTING_KEY_INVENTORY_LOCK_SUCCESSFUL,
+                        successEvent);
+            }
+            log.info("Successfully atomic-locked inventory for Booking {}", event.getBookingId());
 
         } catch (Exception e) {
-            log.error("Failed to lock inventory for Booking ID {}: {}", event.getBookingId(), e.getMessage());
-            // Bắn event báo lỗi ngược lại cho Booking Service để hủy đơn
+            log.error("Lock failed for Booking {}: {}", event.getBookingId(), e.getMessage());
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             InventoryLockFailedEvent lockFailedEvent = InventoryLockFailedEvent.builder()
                     .bookingId(event.getBookingId())
                     .reason(e.getMessage())
@@ -115,21 +169,24 @@ public class InventoryService {
      */
     @Transactional
     public void commitInventory(BookingConfirmedEvent event) {
-        List<LocalDate> datesToCommit = getDatesForServiceType(null, event.getCheckIn(), event.getCheckOut());
-        List<Inventory> inventories = inventoryRepo.findByServiceIdAndDatesIn(event.getServiceId(), datesToCommit);
+        // Tìm các bản ghi đang LOCKED của booking này
+        List<InventoryReservation> reservations = reservationRepo
+                .findByBookingIdAndStatus(event.getBookingId(), InventoryReservation.ReservationStatus.LOCKED);
 
-        for (Inventory inv : inventories) {
-            if (inv.getLockedStock() >= event.getQuantity()) {
-                inv.setLockedStock(inv.getLockedStock() - event.getQuantity());
-                inv.setBookedStock(inv.getBookedStock() + event.getQuantity());
-            } else {
-                log.warn("Inventory Anomaly: Locked stock is less than quantity to commit for Service {} on {}",
-                        event.getServiceId(), inv.getDate());
-                inv.setBookedStock(inv.getBookedStock() + event.getQuantity());
-            }
+        if (reservations.isEmpty()) {
+            log.warn("No LOCKED reservations found for booking {}. Maybe already committed?", event.getBookingId());
+            return;
         }
-        inventoryRepo.saveAll(inventories);
-        log.info("Committed inventory for Booking ID {}", event.getBookingId());
+
+        for (InventoryReservation res : reservations) {
+            // 1. Cập nhật con số tổng hợp trong bảng Inventory (Atomic)
+            inventoryRepo.atomicCommit(res.getServiceId(), res.getDate(), res.getQuantity());
+
+            // 2. Cập nhật trạng thái bản ghi Reservation
+            res.setStatus(InventoryReservation.ReservationStatus.COMMITTED);
+        }
+        reservationRepo.saveAll(reservations);
+        log.info("Committed inventory for Booking {}", event.getBookingId());
     }
 
     /**
@@ -137,25 +194,46 @@ public class InventoryService {
      */
     @Transactional
     public void releaseInventory(BookingCancelledEvent event) {
-        List<LocalDate> datesToRelease = getDatesForServiceType(null, event.getCheckIn(), event.getCheckOut());
-        List<Inventory> inventories = inventoryRepo.findByServiceIdAndDatesIn(event.getServiceId(), datesToRelease);
+        // 1. Tìm tất cả các bản ghi giữ chỗ của booking này
+        List<InventoryReservation> reservations = reservationRepo.findByBookingId(event.getBookingId());
 
-        for (Inventory inv : inventories) {
+        if (reservations.isEmpty()) {
+            log.warn(
+                    "No inventory reservations found to release for cancelled Booking ID {}. Possibly already released or failed at lock stage.",
+                    event.getBookingId());
+            return;
+        }
+
+        // 2. Duyệt qua từng bản ghi và xử lý
+        for (InventoryReservation res : reservations) {
+
+            // Idempotency: Chỉ xử lý nếu trạng thái chưa phải là CANCELLED
+            if (res.getStatus() == InventoryReservation.ReservationStatus.CANCELLED) {
+                continue; // Bỏ qua, đã xử lý rồi
+            }
+
+            // 3. Dựa vào trạng thái trước đó để quyết định nhả kho nào
             if ("PENDING_PAYMENT".equals(event.getPreviousStatus())) {
-                if (inv.getLockedStock() >= event.getQuantity()) {
-                    inv.setLockedStock(inv.getLockedStock() - event.getQuantity());
-                }
+                // Nhả kho từ locked_stock
+                inventoryRepo.atomicReleaseLocked(res.getServiceId(), res.getDate(), res.getQuantity());
+                log.info("Released locked stock for Booking ID {}, Date {}", event.getBookingId(), res.getDate());
+
             } else if ("CONFIRMED".equals(event.getPreviousStatus())) {
-                if (inv.getBookedStock() >= event.getQuantity()) {
-                    inv.setBookedStock(inv.getBookedStock() - event.getQuantity());
-                }
+                // Nhả kho từ booked_stock
+                inventoryRepo.atomicReleaseBooked(res.getServiceId(), res.getDate(), res.getQuantity());
+                log.info("Released booked stock for Booking ID {}, Date {}", event.getBookingId(), res.getDate());
+
             } else {
-                log.warn("Cannot determine how to release inventory for booking {} with previous status {}",
+                log.warn("Cannot determine how to release inventory for Booking ID {} with previous status '{}'",
                         event.getBookingId(), event.getPreviousStatus());
             }
+
+            // 4. Cập nhật trạng thái của "biên lai" giữ chỗ
+            res.setStatus(InventoryReservation.ReservationStatus.CANCELLED);
         }
-        inventoryRepo.saveAll(inventories);
-        log.info("Released inventory for cancelled Booking ID {}", event.getBookingId());
+
+        // 5. Lưu lại trạng thái mới của các "biên lai"
+        reservationRepo.saveAll(reservations);
     }
 
     @Transactional

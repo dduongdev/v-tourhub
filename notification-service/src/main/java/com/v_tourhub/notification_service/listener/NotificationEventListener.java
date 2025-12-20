@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingFailedEvent;
+import com.soa.common.event.BookingReadyForPaymentEvent;
 import com.v_tourhub.notification_service.config.RabbitMQConfig;
 import com.v_tourhub.notification_service.service.EmailService;
 
@@ -46,5 +47,11 @@ public class NotificationEventListener {
         } else {
             log.warn("No customer email in booking.failed event, skipping email sending.");
         }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_READY_FOR_PAYMENT_EMAIL)
+    public void handleBookingReadyForPayment(BookingReadyForPaymentEvent event) {
+        log.info("Received booking.ready_for_payment event for notification: {}", event);
+        emailService.sendPaymentReadyEmail(event);
     }
 }

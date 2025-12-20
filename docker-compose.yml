@@ -218,7 +218,7 @@ services:
       context: .
       dockerfile: catalog-service/Dockerfile
     deploy:
-      replicas: 3
+      replicas: 2
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/catalog_db
@@ -258,7 +258,7 @@ services:
       context: .
       dockerfile: booking-service/Dockerfile
     deploy:
-      replicas: 4
+      replicas: 2
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/booking_db

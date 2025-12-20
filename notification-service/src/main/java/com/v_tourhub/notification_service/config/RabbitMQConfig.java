@@ -61,4 +61,17 @@ public class RabbitMQConfig {
     public Binding bindingBookingFailedEmail(Queue bookingFailedEmailQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(bookingFailedEmailQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_FAILED);
     }
+
+    public static final String QUEUE_READY_FOR_PAYMENT_EMAIL = "notification.ready_for_payment.email.queue";
+    public static final String ROUTING_KEY_READY_FOR_PAYMENT = "booking.ready_for_payment";
+
+    @Bean
+    public Queue readyForPaymentEmailQueue() {
+        return new Queue(QUEUE_READY_FOR_PAYMENT_EMAIL, true);
+    }
+    
+    @Bean
+    public Binding bindingReadyForPaymentEmail(Queue readyForPaymentEmailQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(readyForPaymentEmailQueue).to(bookingExchange).with(ROUTING_KEY_READY_FOR_PAYMENT);
+    }
 }

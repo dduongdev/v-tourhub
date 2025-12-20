@@ -13,9 +13,6 @@ public class RabbitMQConfig {
 
     public static final String EXCHANGE = "booking.exchange";
 
-    public static final String QUEUE_PAYMENT_PROCESS = "payment.process.queue";
-    public static final String ROUTING_KEY_BOOKING_CREATED = "booking.created";
-
     public static final String ROUTING_KEY_PAYMENT_COMPLETED = "payment.completed";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
 
@@ -25,16 +22,6 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange bookingExchange() {
         return new TopicExchange(EXCHANGE);
-    }
-
-    @Bean
-    public Queue paymentProcessQueue() {
-        return new Queue(QUEUE_PAYMENT_PROCESS, true);
-    }
-
-    @Bean
-    public Binding bindingPaymentProcess(Queue paymentProcessQueue, TopicExchange bookingExchange) {
-        return BindingBuilder.bind(paymentProcessQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_CREATED);
     }
 
     @Bean
@@ -63,5 +50,20 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingBookingFailed(Queue bookingFailedQueue, TopicExchange exchange) {
         return BindingBuilder.bind(bookingFailedQueue).to(exchange).with(ROUTING_KEY_BOOKING_FAILED);
+    }
+
+    public static final String ROUTING_KEY_PAYMENT_INITIATED = "payment.initiated";
+
+    public static final String QUEUE_READY_FOR_PAYMENT = "payment.ready_for_payment.queue";
+    public static final String ROUTING_KEY_READY_FOR_PAYMENT = "booking.ready_for_payment";
+
+    @Bean
+    public Queue readyForPaymentQueue() { 
+        return new Queue(QUEUE_READY_FOR_PAYMENT, true);
+     }
+
+    @Bean
+    public Binding bindingReadyForPayment(Queue readyForPaymentQueue, TopicExchange exchange) {
+        return BindingBuilder.bind(readyForPaymentQueue).to(exchange).with(ROUTING_KEY_READY_FOR_PAYMENT);
     }
 }

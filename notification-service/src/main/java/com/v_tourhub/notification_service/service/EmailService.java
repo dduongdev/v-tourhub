@@ -12,6 +12,7 @@ import org.thymeleaf.context.Context;
 import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingFailedEvent;
+import com.soa.common.event.BookingReadyForPaymentEvent;
 import com.v_tourhub.notification_service.entity.NotificationLog;
 import com.v_tourhub.notification_service.repository.NotificationLogRepository;
 
@@ -102,6 +103,34 @@ public class EmailService {
         String htmlContent = templateEngine.process("booking-failed", context);
 
         // 2. Gửi và Log (Tái sử dụng logic gửi)
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            helper.setFrom("noreply@v-tourhub.com");
+
+            mailSender.send(message);
+            log.info("Booking failure email sent to {}", to);
+            saveLog(to, subject, htmlContent, "SENT", null);
+        } catch (Exception e) {
+            log.error("Failed to send booking failure email", e);
+            saveLog(to, subject, htmlContent, "FAILED", e.getMessage());
+        }
+    }
+
+    public void sendPaymentReadyEmail(BookingReadyForPaymentEvent event) {
+        String to = event.getCustomerEmail();
+        if (to == null || to.isEmpty()) { return; }
+
+        String subject = "V-TourHub - Yêu cầu thanh toán cho đơn hàng #" + event.getBookingId();
+        
+        Context context = new Context();
+        context.setVariable("event", event);
+        String htmlContent = templateEngine.process("payment-ready", context);
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

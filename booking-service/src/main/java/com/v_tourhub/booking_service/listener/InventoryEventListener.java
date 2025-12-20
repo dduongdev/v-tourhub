@@ -1,6 +1,7 @@
 package com.v_tourhub.booking_service.listener;
 
 import com.soa.common.event.InventoryLockFailedEvent;
+import com.soa.common.event.InventoryLockSuccessfulEvent;
 import com.v_tourhub.booking_service.config.RabbitMQConfig;
 import com.v_tourhub.booking_service.service.BookingService;
 
@@ -23,6 +24,16 @@ public class InventoryEventListener {
             bookingService.handleInventoryLockFailure(event);
         } catch (Exception e) {
             log.error("Error processing inventory lock failed event", e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_LOCK_SUCCESSFUL)
+    public void handleInventoryLockSuccessful(InventoryLockSuccessfulEvent event) {
+        log.info("Received InventoryLockSuccessfulEvent: {}", event);
+        try {
+            bookingService.moveToPendingPayment(event.getBookingId());
+        } catch (Exception e) {
+            log.error("Error processing inventory lock successful event", e);
         }
     }
 }

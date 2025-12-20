@@ -13,5 +13,6 @@ public class BookingResponse {
     private String serviceName; 
     private BigDecimal totalPrice;
     private LocalDateTime expiresAt; 
+    private boolean isPaymentReady;
     private String paymentUrl; 
 }
