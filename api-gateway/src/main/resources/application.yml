@@ -122,6 +122,23 @@ spring:
                   factor: 2           # Nhân đôi thời gian chờ sau mỗi lần
                   basedOnPreviousValue: false
 
+        # --- Review Service (Public) ---
+        - id: review-service
+          uri: lb://review-service
+          predicates:
+            - Path=/api/reviews/**
+          default-filters:
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
   # 3. Cấu hình Security (Kết nối Keycloak)
   security:
     oauth2:
