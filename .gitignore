@@ -37,3 +37,5 @@ Thumbs.db
 # --- LOGS ---
 *.log
 logs/
+
+v-tourhub-frontend/

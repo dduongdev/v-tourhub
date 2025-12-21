@@ -18,10 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.lang.reflect.AccessFlag.Location;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -73,8 +75,8 @@ public class CatalogController {
         return ApiResponse.success(null, "Deleted successfully");
     }
 
-    @GetMapping("/services/{type}")
-    public ApiResponse<Page<PublicTourismServiceDTO>> getServicesByType(
+        @GetMapping("/services/type/{type}")
+        public ApiResponse<Page<PublicTourismServiceDTO>> getServicesByType(
             @PathVariable TourismService.ServiceType type,
             @RequestParam(required = false) String location,
             Pageable pageable) {
@@ -82,6 +84,22 @@ public class CatalogController {
         Page<TourismService> resultPage = service.getServicesByTypeAndLocation(type, location, pageable);
         Page<PublicTourismServiceDTO> dtoPage = resultPage.map(serviceMapper::toPublicDTO);
         return ApiResponse.success(dtoPage);
+    }
+
+    @GetMapping("/services/{id}")
+    public ApiResponse<PublicTourismServiceDTO> getPublicServiceDetail(
+            @PathVariable Long id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        
+        // 1. Lấy thông tin service
+        TourismService serviceEntity = service.getServiceById(id);
+        
+        // 2. Lấy thông tin inventory
+        List<Inventory> inventories = service.getInventoryForService(id, startDate, endDate);
+        
+        // 3. Map sang DTO
+        return ApiResponse.success(serviceMapper.toPublicDTO(serviceEntity, inventories));
     }
 
     @GetMapping("/search")

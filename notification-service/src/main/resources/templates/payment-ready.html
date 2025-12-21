@@ -8,7 +8,7 @@
     <p>Vui lòng hoàn tất thanh toán trước <b th:text="${#temporals.format(event.expiresAt, 'HH:mm dd-MM-yyyy')}"></b> để hoàn tất đặt chỗ.</p>
     
     <!-- Link này sẽ được FE xử lý để gọi API lấy link VNPay -->
-    <a th:href="@{'http://your-frontend-domain.com/payment?bookingId=' + ${event.bookingId}}" 
+    <a th:href="@{'http://localhost:4200/payment?bookingId=' + ${event.bookingId}}" 
        style="padding: 10px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">
         Thanh toán Ngay
     </a>

@@ -3,10 +3,12 @@ package com.v_tourhub.catalog_service.service;
 import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
 import com.v_tourhub.catalog_service.entity.Destination;
+import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Location;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.repository.DestinationRepository;
+import com.v_tourhub.catalog_service.repository.InventoryRepository;
 import com.v_tourhub.catalog_service.repository.TourismServiceRepository;
 
 import jakarta.persistence.criteria.Predicate;
@@ -34,6 +36,7 @@ public class CatalogService {
     private final TourismServiceRepository serviceRepo;
     private final InventoryService inventoryService;
     private final ServiceMapper serviceMapper;
+    private final InventoryRepository inventoryRepo;
 
     @Cacheable(value = "destinations", key = "#id")
     public Destination getDestinationById(Long id) {
@@ -118,6 +121,13 @@ public class CatalogService {
     public TourismService getServiceById(Long id) {
         return serviceRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+    }
+
+    public List<Inventory> getInventoryForService(Long serviceId, LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) startDate = LocalDate.now();
+        if (endDate == null) endDate = startDate.plusDays(30);
+
+        return inventoryRepo.findInventoryForRange(serviceId, startDate, endDate);
     }
 
     @Transactional

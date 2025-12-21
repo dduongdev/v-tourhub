@@ -48,4 +48,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query(value = "UPDATE inventories i SET i.booked_stock = i.booked_stock - :qty " +
                    "WHERE i.service_id = :serviceId AND i.date = :date AND i.booked_stock >= :qty", nativeQuery = true)
     int atomicReleaseBooked(@Param("serviceId") Long serviceId, @Param("date") LocalDate date, @Param("qty") int qty);
+
+    @Query("SELECT i FROM Inventory i WHERE i.service.id = :serviceId AND i.date BETWEEN :startDate AND :endDate")
+    List<Inventory> findInventoryForRange(@Param("serviceId") Long serviceId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

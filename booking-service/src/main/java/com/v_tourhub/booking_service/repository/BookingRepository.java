@@ -33,4 +33,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         @Param("newStatus") BookingStatus newStatus,
         @Param("oldStatus") BookingStatus oldStatus
     );
+
+    List<Booking> findAllByOrderByCreatedAtDesc();
 }

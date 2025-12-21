@@ -54,7 +54,7 @@ public class StorageService {
                             .build()
             );
 
-            return fileName; 
+            return String.format("%s/%s/%s", externalUrl, bucketName, fileName);
 
         } catch (Exception e) {
             log.error("MinIO upload error", e);

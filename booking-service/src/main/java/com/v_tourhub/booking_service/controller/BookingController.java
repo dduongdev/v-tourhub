@@ -69,4 +69,10 @@ public class BookingController {
                 .map(roleName -> "ROLE_" + roleName.toUpperCase())
                 .collect(Collectors.toList());
     }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<BookingResponse>> getAllBookings() {
+        return ApiResponse.success(bookingService.getAllBookings());
+    }
 }

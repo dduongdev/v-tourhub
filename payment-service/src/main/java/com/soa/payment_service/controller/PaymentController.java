@@ -33,9 +33,9 @@ public class PaymentController {
 
         try {
             Payment payment = paymentService.processVnPayCallback(params);
-            response.sendRedirect("https://google.com?status=success&orderId=" + payment.getBookingId());
+            response.sendRedirect("https://localhost:4200/payment?status=success&bookingId=" + payment.getBookingId());
         } catch (Exception e) {
-            response.sendRedirect("https://google.com?status=failed");
+            response.sendRedirect("https://localhost:4200/payment?status=failed");
         }
     }
 }

@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -151,9 +152,18 @@ public class BookingService {
     public List<BookingResponse> getUserBookings(String userId) {
         List<Booking> bookings = bookingRepo.findByUserIdOrderByCreatedAtDesc(userId);
 
-        return bookings.stream()
-                .map(b -> mapToDto(b, "Service ID: " + b.getServiceId()))
-                .collect(Collectors.toList());
+        List<BookingResponse> responses = new ArrayList<>();
+        for (Booking booking : bookings) {
+            ApiResponse<InternalServiceResponse> catalogResponse = catalogClient
+                    .getServiceDetail(booking.getServiceId());
+            String serviceName = (catalogResponse != null && catalogResponse.getData() != null)
+                    ? catalogResponse.getData().getName()
+                    : "Service ID: " + booking.getServiceId();
+
+            responses.add(mapToDto(booking, serviceName));
+        }
+
+        return responses;
     }
 
     @Transactional
@@ -405,5 +415,22 @@ public class BookingService {
         } else {
             log.warn("Could not move Booking {} to PENDING_PAYMENT. It was not in INITIATED state.", bookingId);
         }
+    }
+
+    public List<BookingResponse> getAllBookings() {
+        List<Booking> bookings = bookingRepo.findAllByOrderByCreatedAtDesc();
+
+        List<BookingResponse> responses = new ArrayList<>();
+        for (Booking booking : bookings) {
+            ApiResponse<InternalServiceResponse> catalogResponse = catalogClient
+                    .getServiceDetail(booking.getServiceId());
+            String serviceName = (catalogResponse != null && catalogResponse.getData() != null)
+                    ? catalogResponse.getData().getName()
+                    : "Service ID: " + booking.getServiceId();
+
+            responses.add(mapToDto(booking, serviceName));
+        }
+
+        return responses;
     }
 }
