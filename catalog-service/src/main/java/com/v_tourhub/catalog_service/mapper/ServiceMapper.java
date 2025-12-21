@@ -83,11 +83,11 @@ public class ServiceMapper {
             destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
                     .id(entity.getDestination().getId())
                     .name(entity.getDestination().getName())
-                    .city(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getCity() : null)
-                    .address(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getAddress() : null)
-                    .province(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getProvince() : null)
-                    .latitude(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getLatitude() : null)
-                    .longitude(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getLongitude() : null)
+                    .city(entity.getDestination().getCity())
+                    .address(entity.getDestination().getAddress())
+                    .province(entity.getDestination().getProvince())
+                    .latitude(entity.getDestination().getLatitude())
+                    .longitude(entity.getDestination().getLongitude())
                     .build();
         }
 
@@ -120,11 +120,11 @@ public class ServiceMapper {
             destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
                     .id(entity.getDestination().getId())
                     .name(entity.getDestination().getName())
-                    .city(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getCity() : null)
-                    .address(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getAddress() : null)
-                    .province(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getProvince() : null)
-                    .latitude(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getLatitude() : null)
-                    .longitude(entity.getDestination().getLocation() != null ? entity.getDestination().getLocation().getLongitude() : null)
+                    .city(entity.getDestination().getCity())
+                    .address(entity.getDestination().getAddress())
+                    .province(entity.getDestination().getProvince())
+                    .latitude(entity.getDestination().getLatitude())
+                    .longitude(entity.getDestination().getLongitude())
                     .build();
         }
 

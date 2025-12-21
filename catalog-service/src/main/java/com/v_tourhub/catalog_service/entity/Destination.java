@@ -25,13 +25,15 @@ public class Destination extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id")
-    private Location location;
-
     @OneToMany(mappedBy = "destination")
     private List<TourismService> services;
 
     @OneToMany(mappedBy = "destination", cascade = CascadeType.ALL)
     private List<Media> mediaList;
+
+    private String address;
+    private String city;
+    private String province;
+    private Double latitude;
+    private Double longitude;
 }

@@ -4,6 +4,7 @@ import com.soa.common.dto.ApiResponse;
 import com.soa.common.dto.InternalServiceResponse;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
 import com.v_tourhub.catalog_service.dto.PublicTourismServiceDTO;
+import com.v_tourhub.catalog_service.dto.UpdateServiceRequest;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.Inventory;
 import com.v_tourhub.catalog_service.entity.Media;
@@ -54,6 +55,13 @@ public class CatalogController {
     @GetMapping("/destinations/{id}")
     public ApiResponse<Destination> getDestination(@PathVariable Long id) {
         return ApiResponse.success(service.getDestinationById(id));
+    }
+
+    @GetMapping("/destinations/{id}/services")
+    public ApiResponse<List<PublicTourismServiceDTO>> getServicesForDestination(@PathVariable Long id) {
+        List<TourismService> services = service.getServicesForDestination(id);
+        List<PublicTourismServiceDTO> dtos = services.stream().map(serviceMapper::toPublicDTO).toList();
+        return ApiResponse.success(dtos);
     }
 
     @PostMapping("/destinations")
@@ -137,6 +145,17 @@ public class CatalogController {
         TourismService savedEntity = service.createService(id, request);
         
         return ApiResponse.success(serviceMapper.toPublicDTO(savedEntity));
+    }
+
+    @PutMapping("/services/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<PublicTourismServiceDTO> updateService(
+            @PathVariable Long id,
+            @RequestBody UpdateServiceRequest request) {
+        
+        TourismService updatedEntity = service.updateService(id, request);
+        
+        return ApiResponse.success(serviceMapper.toPublicDTO(updatedEntity));
     }
 
     @PostMapping(value = "/destinations/{id}/media", consumes = "multipart/form-data")

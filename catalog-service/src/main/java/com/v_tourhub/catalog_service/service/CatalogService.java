@@ -2,9 +2,9 @@ package com.v_tourhub.catalog_service.service;
 
 import com.soa.common.exception.ResourceNotFoundException;
 import com.v_tourhub.catalog_service.dto.CreateServiceRequest;
+import com.v_tourhub.catalog_service.dto.UpdateServiceRequest;
 import com.v_tourhub.catalog_service.entity.Destination;
 import com.v_tourhub.catalog_service.entity.Inventory;
-import com.v_tourhub.catalog_service.entity.Location;
 import com.v_tourhub.catalog_service.entity.TourismService;
 import com.v_tourhub.catalog_service.mapper.ServiceMapper;
 import com.v_tourhub.catalog_service.repository.DestinationRepository;
@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -58,18 +59,13 @@ public class CatalogService {
         existing.setName(destDetails.getName());
         existing.setDescription(destDetails.getDescription());
 
-        if (destDetails.getLocation() != null) {
-            if (existing.getLocation() == null) {
-                existing.setLocation(destDetails.getLocation());
-            } else {
-                Location l = existing.getLocation();
-                Location newL = destDetails.getLocation();
-                l.setAddress(newL.getAddress());
-                l.setCity(newL.getCity());
-                l.setProvince(newL.getProvince());
-                l.setLatitude(newL.getLatitude());
-                l.setLongitude(newL.getLongitude());
-            }
+        // copy flattened location fields directly from destDetails (Destination now stores address/city/province/lat/lng)
+        if (destDetails != null) {
+            existing.setAddress(destDetails.getAddress());
+            existing.setCity(destDetails.getCity());
+            existing.setProvince(destDetails.getProvince());
+            existing.setLatitude(destDetails.getLatitude());
+            existing.setLongitude(destDetails.getLongitude());
         }
 
         return destRepo.save(existing);
@@ -98,7 +94,7 @@ public class CatalogService {
 
             if (filters != null) {
                 if (filters.containsKey("city")) {
-                    predicates.add(cb.like(cb.lower(root.get("location").get("city")),
+                    predicates.add(cb.like(cb.lower(root.get("city")),
                             "%" + filters.get("city").toLowerCase() + "%"));
                 }
                 if (filters.containsKey("minRating")) {
@@ -130,6 +126,9 @@ public class CatalogService {
         return inventoryRepo.findInventoryForRange(serviceId, startDate, endDate);
     }
 
+    public List<TourismService> getServicesForDestination(Long destinationId) {
+        return serviceRepo.findByDestinationId(destinationId);
+    }
     @Transactional
     @CacheEvict(value = "destinations", key = "#destinationId")
     public TourismService createService(Long destinationId, CreateServiceRequest request) {
@@ -157,5 +156,32 @@ public class CatalogService {
         }
 
         return savedService;
+    }
+
+    public TourismService updateService(Long serviceId, UpdateServiceRequest request) {
+        TourismService existing = getServiceById(serviceId);
+
+        existing.setName(request.getName());
+        existing.setDescription(request.getDescription());
+        existing.setPrice(request.getPrice());
+        existing.setAvailability(request.getAvailability());
+        existing.setType(request.getType());
+
+        if (request.getAttributes() != null) {
+            // Cập nhật attributes
+            Set<com.v_tourhub.catalog_service.entity.Attribute> newAttrs = request.getAttributes();
+            existing.getAttributes().clear();
+            for (com.v_tourhub.catalog_service.entity.Attribute attr : newAttrs) {
+                existing.getAttributes().add(
+                    com.v_tourhub.catalog_service.entity.Attribute.builder()
+                        .attributeKey(attr.getAttributeKey())
+                        .attributeValue(attr.getAttributeValue())
+                        .tourismService(existing)
+                        .build()
+                );
+            }
+        }
+
+        return serviceRepo.save(existing);
     }
 }

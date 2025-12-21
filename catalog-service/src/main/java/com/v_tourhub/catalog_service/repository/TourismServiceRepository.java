@@ -21,8 +21,8 @@ public interface TourismServiceRepository extends JpaRepository<TourismService, 
     @Query("SELECT s FROM TourismService s " +
            "WHERE s.type = :type " +
            "AND (:location IS NULL OR :location = '' OR " +
-           "LOWER(s.destination.location.city) LIKE LOWER(CONCAT('%', :location, '%')) OR " +
-           "LOWER(s.destination.location.province) LIKE LOWER(CONCAT('%', :location, '%')))")
+           "LOWER(s.destination.city) LIKE LOWER(CONCAT('%', :location, '%')) OR " +
+           "LOWER(s.destination.province) LIKE LOWER(CONCAT('%', :location, '%')))")
     Page<TourismService> findByTypeAndLocation(@Param("type") TourismService.ServiceType type,
                                                @Param("location") String location, Pageable pageable);
 }
