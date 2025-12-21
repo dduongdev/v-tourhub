@@ -393,6 +393,24 @@ services:
         condition: service_healthy
     networks: [soa-network]
 
+  analytics-service:
+    build:
+      context: .
+      dockerfile: analytics-service/Dockerfile
+    deploy:
+      replicas: 1
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_PORT=8500
+      - TZ=Asia/Ho_Chi_Minh
+    depends_on:
+      consul:
+        condition: service_healthy
+      review-service:
+        condition: service_started
+    networks: [soa-network]
+
 networks:
   soa-network:
     driver: bridge

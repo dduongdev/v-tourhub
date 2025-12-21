@@ -28,6 +28,7 @@
         <module>userprofile-service</module>
         <module>notification-service</module>
         <module>review-service</module>
+        <module>analytics-service</module>
     </modules>
 
     <properties>

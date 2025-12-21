@@ -139,6 +139,23 @@ spring:
                   factor: 2
                   basedOnPreviousValue: false
 
+        # --- Analytics Service (Public) ---
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/analytics/**
+          default-filters:
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET
+                statuses: SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT,INTERNAL_SERVER_ERROR
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 500ms
+                  factor: 2
+                  basedOnPreviousValue: false
+
   # 3. Cấu hình Security (Kết nối Keycloak)
   security:
     oauth2:
