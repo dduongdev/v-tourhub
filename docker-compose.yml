@@ -194,7 +194,7 @@ services:
       - SPRING_RABBITMQ_USERNAME=admin
       - SPRING_RABBITMQ_PASSWORD=admin123
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
     depends_on:
       mysql:
         condition: service_healthy
@@ -215,7 +215,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/catalog_db
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_DATA_REDIS_HOST=redis
@@ -233,7 +233,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/booking_db
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -257,7 +257,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=admin
@@ -279,7 +279,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -299,7 +299,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/catalog_db
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_RABBITMQ_HOST=rabbitmq
@@ -321,7 +321,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=admin
@@ -341,7 +341,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=soa_user
       - SPRING_DATASOURCE_PASSWORD=soa_password
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
@@ -361,7 +361,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_CONSUL_HOST=consul
-      - STRING_CLOUD_CONSUL_PORT=8500
+      - SPRING_CLOUD_CONSUL_PORT=8500
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
     depends_on: [consul, redis]

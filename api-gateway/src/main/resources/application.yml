@@ -74,6 +74,12 @@ spring:
           predicates:
             - Path=/api/notifications/**
 
+        # --- Analytics Service ---
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/analytics/**
+
   # 3. Cấu hình Security (Kết nối Keycloak)
   security:
     oauth2:
