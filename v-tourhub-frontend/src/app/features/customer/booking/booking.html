@@ -1,0 +1,46 @@
+<div class="container mt-4">
+    <h1>Book Service</h1>
+
+    <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()">
+        <div class="mb-3">
+            <label class="form-label">Check-in Date</label>
+            <input type="date" class="form-control" formControlName="checkInDate" required>
+        </div>
+
+        @if (isHotel) {
+        <div class="mb-3">
+            <label class="form-label">Check-out Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" formControlName="checkOutDate" required>
+        </div>
+        }
+
+        <div class="mb-3">
+            <label class="form-label">Number of Guests</label>
+            <input type="number" class="form-control" formControlName="guests" min="1" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" class="form-control" formControlName="quantity" min="1" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Customer Name</label>
+            <input type="text" class="form-control" formControlName="customerName" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" formControlName="customerEmail" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input type="tel" class="form-control" formControlName="customerPhone" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="!bookingForm.valid || submitting">
+            {{ submitting ? 'Booking...' : 'Complete Booking' }}
+        </button>
+    </form>
+</div>

@@ -66,7 +66,7 @@ public class MediaService {
                             .contentType(file.getContentType())
                             .build());
 
-            return fileName;
+            return getFileUrl(fileName);
         } catch (Exception e) {
             throw new RuntimeException("Lỗi upload file: " + e.getMessage());
         }
@@ -168,5 +168,25 @@ public class MediaService {
         return mediaList.stream()
                 .map(m -> getFileUrl(m.getUrl()))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteMedia(Long mediaId) {
+        Media media = mediaRepo.findById(mediaId)
+                .orElseThrow(() -> new RuntimeException("Media not found"));
+
+        try {
+            // Remove from MinIO
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(media.getUrl()) // DB stores filename/key in url field
+                            .build());
+        } catch (Exception e) {
+            log.error("Error deleting from MinIO: {}", e.getMessage());
+            // Continue to delete from DB even if MinIO deletion fails (consistency)
+        }
+
+        mediaRepo.delete(media);
     }
 }

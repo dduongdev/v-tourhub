@@ -288,6 +288,7 @@ public class BookingService {
                 .bookingId(entity.getId())
                 .status(entity.getStatus().name())
                 .serviceName(serviceName)
+                .serviceId(entity.getServiceId())
                 .totalPrice(entity.getTotalPrice())
                 .expiresAt(entity.getExpiresAt())
                 .isPaymentReady(isPaymentReady)
@@ -493,20 +494,20 @@ public class BookingService {
         }
     }
 
-    public List<BookingResponse> getAllBookings() {
-        List<Booking> bookings = bookingRepo.findAllByOrderByCreatedAtDesc();
+    public org.springframework.data.domain.Page<BookingResponse> getAllBookings(
+            org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<Booking> page = bookingRepo.findAll(pageable);
 
-        List<BookingResponse> responses = new ArrayList<>();
-        for (Booking booking : bookings) {
+        return page.map(booking -> {
+            // NOTE: This causes N+1 problem if not cached.
+            // Ideally we should batch fetch or accept it for now as Admin traffic is low.
             ApiResponse<InternalServiceResponse> catalogResponse = catalogClient
                     .getServiceDetail(booking.getServiceId());
             String serviceName = (catalogResponse != null && catalogResponse.getData() != null)
                     ? catalogResponse.getData().getName()
                     : "Service ID: " + booking.getServiceId();
 
-            responses.add(mapToDto(booking, serviceName));
-        }
-
-        return responses;
+            return mapToDto(booking, serviceName);
+        });
     }
 }

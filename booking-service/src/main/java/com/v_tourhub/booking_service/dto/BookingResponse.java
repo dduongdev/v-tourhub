@@ -10,9 +10,10 @@ import java.time.LocalDateTime;
 public class BookingResponse {
     private Long bookingId;
     private String status;
-    private String serviceName; 
+    private Long serviceId;
+    private String serviceName;
     private BigDecimal totalPrice;
-    private LocalDateTime expiresAt; 
+    private LocalDateTime expiresAt;
     private boolean isPaymentReady;
-    private String paymentUrl; 
+    private String paymentUrl;
 }

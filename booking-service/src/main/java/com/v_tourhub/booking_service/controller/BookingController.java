@@ -28,7 +28,7 @@ public class BookingController {
 
     @PostMapping
     public ApiResponse<BookingResponse> createBooking(
-            @RequestHeader(value = "X-User-Id", required = true) String userId, 
+            @RequestHeader(value = "X-User-Id", required = true) String userId,
             @RequestBody @Valid CreateBookingRequest request) {
         return ApiResponse.success(bookingService.createBooking(userId, request));
     }
@@ -42,8 +42,8 @@ public class BookingController {
     @PutMapping("/{id}/cancel")
     public ApiResponse<Void> cancelBooking(
             @PathVariable Long id,
-            @AuthenticationPrincipal Jwt jwt) { 
-        
+            @AuthenticationPrincipal Jwt jwt) {
+
         String userId = jwt.getClaimAsString("sub");
         Collection<String> roles = getRoles(jwt);
 
@@ -52,19 +52,20 @@ public class BookingController {
         } else {
             bookingService.cancelBooking(id, userId);
         }
-        
+
         return ApiResponse.success(null, "Hủy đặt chỗ thành công.");
     }
-    
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Booking> getBookingById(@PathVariable Long id) {
         return ApiResponse.success(bookingService.getBooking(id));
     }
-    
+
     private Collection<String> getRoles(Jwt jwt) {
         Map<String, Object> realmAccess = (Map<String, Object>) jwt.getClaims().get("realm_access");
-        if (realmAccess == null || realmAccess.isEmpty()) return List.of();
+        if (realmAccess == null || realmAccess.isEmpty())
+            return List.of();
         return ((List<String>) realmAccess.get("roles")).stream()
                 .map(roleName -> "ROLE_" + roleName.toUpperCase())
                 .collect(Collectors.toList());
@@ -72,7 +73,17 @@ public class BookingController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<BookingResponse>> getAllBookings() {
-        return ApiResponse.success(bookingService.getAllBookings());
+    public ApiResponse<org.springframework.data.domain.Page<BookingResponse>> getAllBookings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sort,
+            @RequestParam(defaultValue = "desc") String direction) {
+
+        org.springframework.data.domain.Sort sorting = direction.equalsIgnoreCase("desc")
+                ? org.springframework.data.domain.Sort.by(sort).descending()
+                : org.springframework.data.domain.Sort.by(sort).ascending();
+
+        return ApiResponse.success(bookingService.getAllBookings(
+                org.springframework.data.domain.PageRequest.of(page, size, sorting)));
     }
 }

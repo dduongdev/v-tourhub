@@ -1,0 +1,84 @@
+<div class="container pb-5">
+    @if (loading) {
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    } @else if (destination) {
+    <div class="page-header">
+        <h1 class="page-title">{{ destination.name }}</h1>
+        <div class="d-flex justify-content-center gap-3 text-secondary mb-4">
+            <span><i class="bi bi-geo-alt"></i> {{ destination.city }}</span>
+            <span><i class="bi bi-map"></i> {{ destination.province || '' }}</span>
+            <!-- <span><i class="bi bi-compass"></i> Coordinates: {{ destination.latitude }}, {{ destination.longitude }}</span> -->
+        </div>
+        <p class="page-subtitle">{{ destination.description }}</p>
+    </div>
+
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h3 class="fw-bold text-dark">Available Experiences</h3>
+            <p class="text-secondary">Choose from our exclusive selection of services</p>
+        </div>
+
+        @if (destination.services && destination.services.length > 0) {
+        <div class="grid-cards">
+            @for (service of destination.services; track service.id) {
+            <div class="card-premium">
+                <div class="card-img-wrapper" style="height: 200px;">
+                    @if (service.mediaList && service.mediaList.length > 0) {
+                    <img [src]="service.mediaList[0].url" [alt]="service.name"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                    } @else {
+                    <span class="fs-3 text-secondary"><i class="bi bi-image"></i></span>
+                    }
+                </div>
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-info bg-opacity-10 text-info fw-bold px-3 py-2 rounded-pill small">{{
+                            service.type || 'SERVICE' }}</span>
+                        @if (service.availability) {
+                        <span class="text-success small fw-bold"><i class="bi bi-check-circle-fill"></i>
+                            Available</span>
+                        } @else {
+                        <span class="text-secondary small fw-bold">Sold Out</span>
+                        }
+                    </div>
+
+                    <h4 class="card-title fw-bold mt-2 mb-2">{{ service.name }}</h4>
+                    <p class="card-text text-secondary mb-4 flex-grow-1"
+                        style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        {{ service.description }}</p>
+
+                    <div class="d-flex justify-content-between align-items-end mt-auto pt-3 border-top border-light">
+                        <div>
+                            <small class="text-muted d-block text-uppercase"
+                                style="font-size: 0.7rem; letter-spacing: 1px;">Starting from</small>
+                            <span class="fs-4 fw-bold text-primary">{{ service.price | number }} VND</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-3">
+                        <a [routerLink]="['/booking']" [queryParams]="{serviceId: service.id}"
+                            class="btn btn-primary fw-bold" [class.disabled]="!service.availability">
+                            Book Now
+                        </a>
+                        <a [routerLink]="['/service', service.id]" class="btn btn-outline-primary small">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+        } @else {
+        <div class="col-12">
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="bi bi-compass"></i></div>
+                <h3>Coming Soon</h3>
+                <p class="text-secondary">No services currently listed for this destination.</p>
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>

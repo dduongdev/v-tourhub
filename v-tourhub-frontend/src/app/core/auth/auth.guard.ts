@@ -10,7 +10,7 @@ export const authGuard: CanActivateFn = (route, state) => {
         return true;
     }
 
-    // Store the attempted URL for redirecting after login
+    // Prevent redirect loop - just initiate login flow
     authService.login(state.url);
     return false;
 };

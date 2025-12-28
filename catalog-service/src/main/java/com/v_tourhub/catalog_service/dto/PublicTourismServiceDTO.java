@@ -20,13 +20,21 @@ public class PublicTourismServiceDTO {
     // Thông tin về địa điểm cha
     private DestinationInfo destination;
 
-    // Danh sách ảnh (chỉ trả về URL)
-    private List<String> mediaUrls;
+    // List of Media Objects (ID + URL)
+    private List<MediaInfo> mediaList;
+
+    @Data
+    @Builder
+    public static class MediaInfo {
+        private Long id;
+        private String url;
+        private String caption;
+    }
 
     // Danh sách thuộc tính (Key-Value)
     private Map<String, String> attributes;
 
-     private List<InventoryInfo> inventoryCalendar;
+    private List<InventoryInfo> inventoryCalendar;
 
     // DTO lồng nhau để chứa thông tin Destination
     @Data

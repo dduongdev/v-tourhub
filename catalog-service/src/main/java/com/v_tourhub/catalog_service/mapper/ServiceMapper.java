@@ -1,6 +1,5 @@
 package com.v_tourhub.catalog_service.mapper;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,128 +22,137 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class ServiceMapper {
-    private final MediaService mediaService;
+        private final MediaService mediaService;
 
-    public InternalServiceResponse toInternalResponse(TourismService entity) {
-        if (entity == null) return null;
-        return InternalServiceResponse.builder()
-                .id(entity.getId())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .price(entity.getPrice())
-                .availability(entity.getAvailability())
-                .destinationName(entity.getDestination() != null ? entity.getDestination().getName() : null)
-                .type(entity.getType() != null ? entity.getType().name() : null)
-                .build();
-    }
-
-    public TourismService toEntity(CreateServiceRequest request) {
-        if (request == null) return null;
-        TourismService service = TourismService.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .price(request.getPrice())
-                .availability(request.getAvailability())
-                .type(request.getType())
-                .build();
-        if (request.getAttributes() != null && !request.getAttributes().isEmpty()) {
-            List<Attribute> attributeEntities = new ArrayList<>();
-            for (Map.Entry<String, String> entry : request.getAttributes().entrySet()) {
-                Attribute attr = Attribute.builder()
-                        .attributeKey(entry.getKey())
-                        .attributeValue(entry.getValue())
-                        .tourismService(service) 
-                        .build();
-                attributeEntities.add(attr);
-            }
-            service.setAttributes(attributeEntities);
+        public InternalServiceResponse toInternalResponse(TourismService entity) {
+                if (entity == null)
+                        return null;
+                return InternalServiceResponse.builder()
+                                .id(entity.getId())
+                                .name(entity.getName())
+                                .description(entity.getDescription())
+                                .price(entity.getPrice())
+                                .availability(entity.getAvailability())
+                                .destinationName(entity.getDestination() != null ? entity.getDestination().getName()
+                                                : null)
+                                .type(entity.getType() != null ? entity.getType().name() : null)
+                                .build();
         }
 
-        return service;
-    }
+        public TourismService toEntity(CreateServiceRequest request) {
+                if (request == null)
+                        return null;
+                TourismService service = TourismService.builder()
+                                .name(request.getName())
+                                .description(request.getDescription())
+                                .price(request.getPrice())
+                                .availability(request.getAvailability())
+                                .type(request.getType())
+                                .build();
+                if (request.getAttributes() != null && !request.getAttributes().isEmpty()) {
+                        List<Attribute> attributeEntities = new ArrayList<>();
+                        for (Map.Entry<String, String> entry : request.getAttributes().entrySet()) {
+                                Attribute attr = Attribute.builder()
+                                                .attributeKey(entry.getKey())
+                                                .attributeValue(entry.getValue())
+                                                .tourismService(service)
+                                                .build();
+                                attributeEntities.add(attr);
+                        }
+                        service.setAttributes(attributeEntities);
+                }
 
-    public PublicTourismServiceDTO toPublicDTO(TourismService entity, List<Inventory> inventories) {
-        if (entity == null) return null;
-
-        List<InventoryInfo> inventoryInfos = Collections.emptyList();
-        if (inventories != null && !inventories.isEmpty()) {
-            inventoryInfos = inventories.stream().map(inv -> 
-                InventoryInfo.builder()
-                    .date(inv.getDate())
-                    .availableStock(inv.getAvailableStock())
-                    .totalStock(inv.getTotalStock())
-                    .isAvailable(inv.getAvailableStock() > 0)
-                    .build()
-            ).collect(Collectors.toList());
+                return service;
         }
 
-        PublicTourismServiceDTO.DestinationInfo destInfo = null;
-        if (entity.getDestination() != null) {
-            destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
-                    .id(entity.getDestination().getId())
-                    .name(entity.getDestination().getName())
-                    .city(entity.getDestination().getCity())
-                    .address(entity.getDestination().getAddress())
-                    .province(entity.getDestination().getProvince())
-                    .latitude(entity.getDestination().getLatitude())
-                    .longitude(entity.getDestination().getLongitude())
-                    .build();
+        public PublicTourismServiceDTO toPublicDTO(TourismService entity, List<Inventory> inventories) {
+                if (entity == null)
+                        return null;
+
+                List<InventoryInfo> inventoryInfos = Collections.emptyList();
+                if (inventories != null && !inventories.isEmpty()) {
+                        inventoryInfos = inventories.stream().map(inv -> InventoryInfo.builder()
+                                        .date(inv.getDate())
+                                        .availableStock(inv.getAvailableStock())
+                                        .totalStock(inv.getTotalStock())
+                                        .isAvailable(inv.getAvailableStock() > 0)
+                                        .build()).collect(Collectors.toList());
+                }
+
+                PublicTourismServiceDTO.DestinationInfo destInfo = null;
+                if (entity.getDestination() != null) {
+                        destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
+                                        .id(entity.getDestination().getId())
+                                        .name(entity.getDestination().getName())
+                                        .city(entity.getDestination().getCity())
+                                        .address(entity.getDestination().getAddress())
+                                        .province(entity.getDestination().getProvince())
+                                        .latitude(entity.getDestination().getLatitude())
+                                        .longitude(entity.getDestination().getLongitude())
+                                        .build();
+                }
+
+                return PublicTourismServiceDTO.builder()
+                                .id(entity.getId())
+                                .name(entity.getName())
+                                .description(entity.getDescription())
+                                .price(entity.getPrice())
+                                .serviceType(entity.getType() != null ? entity.getType().name() : null)
+                                .availability(entity.getAvailability())
+                                .destination(destInfo)
+                                .inventoryCalendar(inventoryInfos)
+                                .mediaList(entity.getMediaList() != null ? entity.getMediaList().stream()
+                                                .map(media -> PublicTourismServiceDTO.MediaInfo.builder()
+                                                                .id(media.getId())
+                                                                .url(media.getUrl())
+                                                                .caption(media.getCaption())
+                                                                .build())
+                                                .collect(Collectors.toList())
+                                                : Collections.emptyList())
+                                .attributes(entity.getAttributes() != null ? entity.getAttributes().stream()
+                                                .collect(Collectors.toMap(Attribute::getAttributeKey,
+                                                                Attribute::getAttributeValue))
+                                                : Collections.emptyMap())
+                                .build();
         }
 
-        return PublicTourismServiceDTO.builder()
-                .id(entity.getId())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .price(entity.getPrice())
-                .serviceType(entity.getType() != null ? entity.getType().name() : null)
-                .availability(entity.getAvailability())
-                .destination(destInfo)
-                .inventoryCalendar(inventoryInfos)
-                .mediaUrls(entity.getMediaList() != null ?
-                        entity.getMediaList().stream()
-                                .map(media -> mediaService.getFileUrl(media.getUrl()))
-                                .collect(Collectors.toList())
-                        : Collections.emptyList())
-                .attributes(entity.getAttributes() != null ?
-                        entity.getAttributes().stream()
-                                .collect(Collectors.toMap(Attribute::getAttributeKey, Attribute::getAttributeValue))
-                        : Collections.emptyMap())
-                .build();
-    }
+        public PublicTourismServiceDTO toPublicDTO(TourismService entity) {
+                if (entity == null)
+                        return null;
 
-    public PublicTourismServiceDTO toPublicDTO(TourismService entity) {
-        if (entity == null) return null;
+                PublicTourismServiceDTO.DestinationInfo destInfo = null;
+                if (entity.getDestination() != null) {
+                        destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
+                                        .id(entity.getDestination().getId())
+                                        .name(entity.getDestination().getName())
+                                        .city(entity.getDestination().getCity())
+                                        .address(entity.getDestination().getAddress())
+                                        .province(entity.getDestination().getProvince())
+                                        .latitude(entity.getDestination().getLatitude())
+                                        .longitude(entity.getDestination().getLongitude())
+                                        .build();
+                }
 
-        PublicTourismServiceDTO.DestinationInfo destInfo = null;
-        if (entity.getDestination() != null) {
-            destInfo = PublicTourismServiceDTO.DestinationInfo.builder()
-                    .id(entity.getDestination().getId())
-                    .name(entity.getDestination().getName())
-                    .city(entity.getDestination().getCity())
-                    .address(entity.getDestination().getAddress())
-                    .province(entity.getDestination().getProvince())
-                    .latitude(entity.getDestination().getLatitude())
-                    .longitude(entity.getDestination().getLongitude())
-                    .build();
+                return PublicTourismServiceDTO.builder()
+                                .id(entity.getId())
+                                .name(entity.getName())
+                                .description(entity.getDescription())
+                                .price(entity.getPrice())
+                                .serviceType(entity.getType() != null ? entity.getType().name() : null)
+                                .availability(entity.getAvailability())
+                                .destination(destInfo)
+                                .mediaList(entity.getMediaList() != null ? entity.getMediaList().stream()
+                                                .map(media -> PublicTourismServiceDTO.MediaInfo.builder()
+                                                                .id(media.getId())
+                                                                .url(media.getUrl())
+                                                                .caption(media.getCaption())
+                                                                .build())
+                                                .collect(Collectors.toList())
+                                                : Collections.emptyList())
+                                .attributes(entity.getAttributes() != null ? entity.getAttributes().stream()
+                                                .collect(Collectors.toMap(Attribute::getAttributeKey,
+                                                                Attribute::getAttributeValue))
+                                                : Collections.emptyMap())
+                                .build();
         }
-
-        return PublicTourismServiceDTO.builder()
-                .id(entity.getId())
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .price(entity.getPrice())
-                .serviceType(entity.getType() != null ? entity.getType().name() : null)
-                .availability(entity.getAvailability())
-                .destination(destInfo)
-                .mediaUrls(entity.getMediaList() != null ?
-                        entity.getMediaList().stream()
-                                .map(media -> mediaService.getFileUrl(media.getUrl()))
-                                .collect(Collectors.toList())
-                        : Collections.emptyList())
-                .attributes(entity.getAttributes() != null ?
-                        entity.getAttributes().stream()
-                                .collect(Collectors.toMap(Attribute::getAttributeKey, Attribute::getAttributeValue))
-                        : Collections.emptyMap())
-                .build();
-    }
 }

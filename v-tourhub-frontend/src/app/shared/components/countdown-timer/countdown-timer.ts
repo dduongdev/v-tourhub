@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   styleUrl: './countdown-timer.scss'
 })
 export class CountdownTimerComponent implements OnInit, OnDestroy {
-  @Input() expiresAt!: string;
+  @Input() expiresAt?: string | null;
 
   timeLeft = '00:00';
   isWarning = false;
@@ -30,6 +30,12 @@ export class CountdownTimerComponent implements OnInit, OnDestroy {
   }
 
   private updateTime(): void {
+    if (!this.expiresAt) {
+      this.timeLeft = '';
+      this.isWarning = false;
+      return;
+    }
+
     const now = new Date().getTime();
     const expires = new Date(this.expiresAt).getTime();
     const diff = expires - now;

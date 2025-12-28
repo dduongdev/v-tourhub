@@ -12,10 +12,12 @@ export class StatusBadgeComponent {
 
   get badgeClass(): string {
     switch (this.status) {
-      case 'PENDING': return 'bg-primary';
+      case 'INITIATED': return 'bg-info';
+      case 'PENDING_PAYMENT': return 'bg-warning';
       case 'CONFIRMED': return 'bg-success';
+      case 'COMPLETED': return 'bg-primary';
       case 'CANCELLED': return 'bg-danger';
-      case 'EXPIRED': return 'bg-secondary';
+      case 'REFUNDED': return 'bg-dark';
       default: return 'bg-secondary';
     }
   }

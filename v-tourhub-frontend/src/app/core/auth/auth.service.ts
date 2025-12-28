@@ -57,26 +57,50 @@ export class AuthService {
     }
 
     getUserRoles(): string[] {
-        const claims = this.oauthService.getIdentityClaims() as any;
-        if (!claims) return [];
+        let roles: string[] = [];
 
-        // Try realm_access.roles first (Keycloak standard)
-        if (claims.realm_access?.roles) {
-            return claims.realm_access.roles;
+        // 1. Check Identity Claims (ID Token)
+        const idClaims = this.oauthService.getIdentityClaims() as any;
+        if (idClaims && idClaims.realm_access?.roles) {
+            roles = roles.concat(idClaims.realm_access.roles);
         }
 
-        // Fallback to resource_access for client roles
-        const clientId = authConfig.clientId;
-        if (claims.resource_access?.[clientId || '']?.roles) {
-            return claims.resource_access[clientId || ''].roles;
+        // 2. Check Access Token (if different from ID Token or contains extra scopes)
+        const accessToken = this.oauthService.getAccessToken();
+        if (accessToken) {
+            try {
+                const parts = accessToken.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1]));
+                    if (payload.realm_access?.roles) {
+                        roles = roles.concat(payload.realm_access.roles);
+                    }
+                    if (payload.resource_access?.[authConfig.clientId || '']?.roles) {
+                        roles = roles.concat(payload.resource_access[authConfig.clientId || ''].roles);
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing access token', e);
+            }
         }
 
-        return [];
+        // De-duplicate
+        return Array.from(new Set(roles));
     }
 
     hasRole(role: string): boolean {
         const roles = this.getUserRoles();
         return roles.includes(role);
+    }
+
+    isAdmin(): boolean {
+        const roles = this.getUserRoles();
+        console.log('Checking isAdmin. Roles:', roles);
+        if (!roles || roles.length === 0) return false;
+        // Common possibilities: 'ROLE_ADMIN' (backend prefixed) or 'admin'
+        if (roles.includes('ROLE_ADMIN') || roles.includes('admin')) return true;
+        // Fallback: any role name containing 'admin'
+        return roles.some(r => /admin/i.test(r));
     }
 
     getCurrentUser(): any {

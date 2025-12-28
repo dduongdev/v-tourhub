@@ -3,7 +3,10 @@ export interface User {
     email: string;
     firstName?: string;
     lastName?: string;
-    phoneNumber?: string;
+    phone?: string;
     bio?: string;
     roles?: string[];
+    avatarUrl?: string;
+    address?: string;
+    currency?: string;
 }

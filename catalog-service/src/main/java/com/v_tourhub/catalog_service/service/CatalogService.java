@@ -59,7 +59,8 @@ public class CatalogService {
         existing.setName(destDetails.getName());
         existing.setDescription(destDetails.getDescription());
 
-        // copy flattened location fields directly from destDetails (Destination now stores address/city/province/lat/lng)
+        // copy flattened location fields directly from destDetails (Destination now
+        // stores address/city/province/lat/lng)
         if (destDetails != null) {
             existing.setAddress(destDetails.getAddress());
             existing.setCity(destDetails.getCity());
@@ -88,8 +89,7 @@ public class CatalogService {
                 String likePattern = "%" + q.toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("name")), likePattern),
-                        cb.like(cb.lower(root.get("description")), likePattern)
-                ));
+                        cb.like(cb.lower(root.get("description")), likePattern)));
             }
 
             if (filters != null) {
@@ -107,34 +107,47 @@ public class CatalogService {
         }, pageable);
     }
 
-    public Page<TourismService> getServicesByTypeAndLocation(TourismService.ServiceType type, String location, Pageable pageable) {
+    public Page<TourismService> getServicesByTypeAndLocation(TourismService.ServiceType type, String location,
+            Pageable pageable) {
         if (!StringUtils.hasText(location)) {
             return serviceRepo.findByType(type, pageable);
         }
         return serviceRepo.findByTypeAndLocation(type, location, pageable);
     }
 
+    @Transactional(readOnly = true)
     public TourismService getServiceById(Long id) {
         return serviceRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
     }
 
     public List<Inventory> getInventoryForService(Long serviceId, LocalDate startDate, LocalDate endDate) {
-        if (startDate == null) startDate = LocalDate.now();
-        if (endDate == null) endDate = startDate.plusDays(30);
+        if (startDate == null)
+            startDate = LocalDate.now();
+        if (endDate == null)
+            endDate = startDate.plusDays(30);
 
         return inventoryRepo.findInventoryForRange(serviceId, startDate, endDate);
     }
 
     public List<TourismService> getServicesForDestination(Long destinationId) {
-        return serviceRepo.findByDestinationId(destinationId);
+        List<TourismService> services = serviceRepo.findByDestinationId(destinationId);
+
+        // Filter out services that have no available inventory from today onwards
+        return services.stream()
+                .filter(service -> {
+                    Long availableCount = inventoryRepo.countAvailableFutureStock(service.getId(), LocalDate.now());
+                    return availableCount != null && availableCount > 0;
+                })
+                .toList();
     }
+
     @Transactional
     @CacheEvict(value = "destinations", key = "#destinationId")
     public TourismService createService(Long destinationId, CreateServiceRequest request) {
         // 1. Tìm Destination
         Destination dest = getDestinationById(destinationId);
-        
+
         // 2. Convert DTO -> Entity (Mapper đã xử lý name, desc, attributes...)
         TourismService service = serviceMapper.toEntity(request);
         service.setDestination(dest);
@@ -146,11 +159,10 @@ public class CatalogService {
         if (request.getInventory() != null) {
             CreateServiceRequest.InventoryConfig invConfig = request.getInventory();
             inventoryService.initInventory(
-                savedService.getId(), 
-                invConfig.getTotalStock(), 
-                invConfig.getStartDate(), 
-                invConfig.getEndDate()
-            );
+                    savedService.getId(),
+                    invConfig.getTotalStock(),
+                    invConfig.getStartDate(),
+                    invConfig.getEndDate());
         } else {
             inventoryService.initInventory(savedService.getId(), 10, LocalDate.now(), LocalDate.now().plusYears(1));
         }
@@ -173,12 +185,11 @@ public class CatalogService {
             existing.getAttributes().clear();
             for (com.v_tourhub.catalog_service.entity.Attribute attr : newAttrs) {
                 existing.getAttributes().add(
-                    com.v_tourhub.catalog_service.entity.Attribute.builder()
-                        .attributeKey(attr.getAttributeKey())
-                        .attributeValue(attr.getAttributeValue())
-                        .tourismService(existing)
-                        .build()
-                );
+                        com.v_tourhub.catalog_service.entity.Attribute.builder()
+                                .attributeKey(attr.getAttributeKey())
+                                .attributeValue(attr.getAttributeValue())
+                                .tourismService(existing)
+                                .build());
             }
         }
 

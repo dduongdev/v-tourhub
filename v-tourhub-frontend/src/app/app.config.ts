@@ -1,10 +1,15 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, APP_INITIALIZER } from '@angular/core';
+import { provideRouter, withRouterConfig } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideOAuthClient } from 'angular-oauth2-oidc';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/api/auth.interceptor';
+import { AuthService } from './core/auth/auth.service';
+
+function initApp(authService: AuthService) {
+  return () => authService.initAuth();
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -13,6 +18,12 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([authInterceptor])
     ),
-    provideOAuthClient()
+    provideOAuthClient(),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initApp,
+      deps: [AuthService],
+      multi: true
+    }
   ]
 };

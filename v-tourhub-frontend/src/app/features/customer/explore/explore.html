@@ -1,24 +1,51 @@
-<div class="container mt-4">
-    <h1 class="mb-4">Explore K Destinations</h1>
+<div class="container pb-5">
+    <div class="page-header">
+        <h1 class="page-title">Explore Destinations</h1>
+        <p class="page-subtitle">Discover your next adventure with our curated selection of top destinations</p>
+    </div>
 
     @if (loading) {
-    <div class="text-center">
-        <div class="spinner-border" role="status"></div>
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
     </div>
     } @else if (destinations.length === 0) {
-    <p>No destinations available.</p>
+    <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-geo-alt"></i></div>
+        <h3>No destinations found</h3>
+        <p class="text-secondary">Check back later for new exciting places!</p>
+    </div>
     } @else {
-    <div class="row">
+    <div class="grid-cards">
         @for (dest of destinations; track dest.id) {
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">{{ dest.name }}</h5>
-                    <p class="card-text">{{ dest.description || 'Beautiful destination' }}</p>
-                    <a [routerLink]="['/destination', dest.id]" class="btn btn-primary">View Details</a>
+        <!-- Wrap entire card in a link for full-card clickability without invisible overlays -->
+        <a [routerLink]="['/destination', dest.id]" class="card-premium-link">
+            <div class="card-premium">
+                <div class="card-img-wrapper">
+                    @if (dest.mediaList && dest.mediaList.length > 0) {
+                    <img [src]="dest.mediaList[0].url" [alt]="dest.name"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                    } @else {
+                    <span class="fs-1 text-secondary"><i class="bi bi-image"></i></span>
+                    }
+                </div>
+
+                <div class="card-body p-4 d-flex flex-column h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold text-dark mb-0">{{ dest.name }}</h5>
+                    </div>
+                    <p class="small text-primary mb-3"><i class="bi bi-geo-alt-fill"></i> {{ dest.city || 'Unknown City'
+                        }}
+                    </p>
+                    <p class="card-text text-secondary mb-4 flex-grow-1"
+                        style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                        {{ dest.description || 'Experience the beauty of this amazing destination.' }}
+                    </p>
+                    <span class="btn btn-outline-primary w-100">View Details</span>
                 </div>
             </div>
-        </div>
+        </a>
         }
     </div>
     }

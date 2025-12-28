@@ -1,0 +1,107 @@
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2>Booking Management</h2>
+        <p class="text-secondary">View and manage all system bookings.</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <select class="form-select w-auto d-inline-block" [(ngModel)]="filterStatus" (change)="loadBookings()">
+            <option value="">All Statuses</option>
+            <option value="INITIATED">Initiated</option>
+            <option value="PENDING_PAYMENT">Pending Payment</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+        </select>
+        <button class="btn btn-outline-primary ms-2" (click)="loadBookings()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="ps-4">ID</th>
+                        <th>Service</th>
+                        <th>Customer</th>
+                        <!-- <th>Date</th> -->
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (loading) {
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </td>
+                    </tr>
+                    } @else if (bookings.length === 0) {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-secondary">
+                            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                            No bookings found
+                        </td>
+                    </tr>
+                    } @else {
+                    @for (booking of bookings; track booking.bookingId) {
+                    <tr>
+                        <td class="ps-4 fw-bold">#{{ booking.bookingId }}</td>
+                        <td>
+                            <div class="fw-bold">{{ booking.serviceName }}</div>
+                            <!-- <small class="text-muted">ID: {{ booking.serviceId }}</small> -->
+                        </td>
+                        <td>
+                            <!-- Backend BookingResponse doesn't always have name, fallback to User Profile fetch if needed, 
+                                     but for now listing what we have. API analysis showed userId is there. -->
+                            <span class="d-block text-truncate"
+                                style="max-width: 150px; font-style: italic; color: #999;">
+                                (Customer Info Hidden)
+                            </span>
+                        </td>
+                        <!-- <td>{{ booking.checkInDate | date:'shortDate' }}</td> -->
+                        <td>{{ booking.totalPrice | number }} VND</td>
+                        <td>
+                            <app-status-badge [status]="booking.status"></app-status-badge>
+                        </td>
+                        <td class="text-end pe-4">
+                            <!-- Fix layout for delete button: increase size and icon -->
+                            <button class="btn btn-outline-danger"
+                                style="width: 32px; height: 32px; padding: 0; line-height: 30px;"
+                                *ngIf="booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED'"
+                                (click)="cancelBooking(booking.bookingId)" title="Cancel Booking">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="totalElements > 0">
+        <div class="text-secondary small">
+            Showing {{ pageNumber * pageSize + 1 }} - {{ getEndIndex() }} of {{ totalElements }}
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber === 0"
+                (click)="onPageChange(pageNumber - 1)">
+                <i class="bi bi-chevron-left"></i> Previous
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" disabled>
+                Page {{ pageNumber + 1 }} of {{ totalPages }}
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="pageNumber >= totalPages - 1"
+                (click)="onPageChange(pageNumber + 1)">
+                Next <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>

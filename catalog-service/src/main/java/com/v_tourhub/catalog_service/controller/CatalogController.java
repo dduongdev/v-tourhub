@@ -44,10 +44,10 @@ public class CatalogController {
             @RequestParam(required = false) Map<String, String> filters,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         filters.remove("page");
         filters.remove("size");
-        
+
         Page<Destination> result = service.searchDestinations(null, filters, PageRequest.of(page, size));
         return ApiResponse.success(result);
     }
@@ -83,12 +83,12 @@ public class CatalogController {
         return ApiResponse.success(null, "Deleted successfully");
     }
 
-        @GetMapping("/services/type/{type}")
-        public ApiResponse<Page<PublicTourismServiceDTO>> getServicesByType(
+    @GetMapping("/services/type/{type}")
+    public ApiResponse<Page<PublicTourismServiceDTO>> getServicesByType(
             @PathVariable TourismService.ServiceType type,
             @RequestParam(required = false) String location,
             Pageable pageable) {
-        
+
         Page<TourismService> resultPage = service.getServicesByTypeAndLocation(type, location, pageable);
         Page<PublicTourismServiceDTO> dtoPage = resultPage.map(serviceMapper::toPublicDTO);
         return ApiResponse.success(dtoPage);
@@ -99,13 +99,13 @@ public class CatalogController {
             @PathVariable Long id,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        
+
         // 1. Lấy thông tin service
         TourismService serviceEntity = service.getServiceById(id);
-        
+
         // 2. Lấy thông tin inventory
         List<Inventory> inventories = service.getInventoryForService(id, startDate, endDate);
-        
+
         // 3. Map sang DTO
         return ApiResponse.success(serviceMapper.toPublicDTO(serviceEntity, inventories));
     }
@@ -118,7 +118,7 @@ public class CatalogController {
             @RequestParam(defaultValue = "asc") String direction,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         filters.remove("q");
         filters.remove("sort");
         filters.remove("direction");
@@ -126,7 +126,7 @@ public class CatalogController {
         filters.remove("size");
 
         Sort sorting = direction.equalsIgnoreCase("desc") ? Sort.by(sort).descending() : Sort.by(sort).ascending();
-        
+
         return ApiResponse.success(service.searchDestinations(q, filters, PageRequest.of(page, size, sorting)));
     }
 
@@ -139,11 +139,11 @@ public class CatalogController {
     @PostMapping("/destinations/{id}/services")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PublicTourismServiceDTO> createService(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestBody CreateServiceRequest request) {
-        
+
         TourismService savedEntity = service.createService(id, request);
-        
+
         return ApiResponse.success(serviceMapper.toPublicDTO(savedEntity));
     }
 
@@ -152,9 +152,9 @@ public class CatalogController {
     public ApiResponse<PublicTourismServiceDTO> updateService(
             @PathVariable Long id,
             @RequestBody UpdateServiceRequest request) {
-        
+
         TourismService updatedEntity = service.updateService(id, request);
-        
+
         return ApiResponse.success(serviceMapper.toPublicDTO(updatedEntity));
     }
 
@@ -164,7 +164,7 @@ public class CatalogController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "caption", required = false) String caption) {
-        
+
         Media media = mediaService.addMediaToDestination(id, file, caption);
         return ApiResponse.success(mediaService.getFileUrl(media.getUrl()));
     }
@@ -175,7 +175,7 @@ public class CatalogController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "caption", required = false) String caption) {
-        
+
         Media media = mediaService.addMediaToService(id, file, caption);
         return ApiResponse.success(mediaService.getFileUrl(media.getUrl()));
     }
@@ -185,7 +185,7 @@ public class CatalogController {
     public ApiResponse<List<String>> uploadBatchDestinationMedia(
             @PathVariable Long id,
             @RequestParam("files") List<MultipartFile> files) {
-        
+
         List<String> urls = mediaService.addBatchMediaToDestination(id, files);
         return ApiResponse.success(urls);
     }
@@ -195,25 +195,32 @@ public class CatalogController {
     public ApiResponse<List<String>> uploadBatchServiceMedia(
             @PathVariable Long id,
             @RequestParam("files") List<MultipartFile> files) {
-        
+
         List<String> urls = mediaService.addBatchMediaToService(id, files);
         return ApiResponse.success(urls);
     }
 
     @PostMapping("/services/{id}/inventory")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> setupInventory(@PathVariable Long id, 
-                                            @RequestParam int total, 
-                                            @RequestParam String start, 
-                                            @RequestParam String end) {
+    public ApiResponse<Void> setupInventory(@PathVariable Long id,
+            @RequestParam int total,
+            @RequestParam String start,
+            @RequestParam String end) {
         inventoryService.initInventory(id, total, LocalDate.parse(start), LocalDate.parse(end));
         return ApiResponse.success(null, "Inventory setup complete");
     }
-    
+
     @PutMapping("/inventory/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Inventory> updateInventory(@PathVariable Long id, @RequestParam int newTotalStock) {
         Inventory updated = inventoryService.updateStockForDay(id, newTotalStock);
         return ApiResponse.success(updated);
+    }
+
+    @DeleteMapping("/media/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> deleteMedia(@PathVariable Long id) {
+        mediaService.deleteMedia(id);
+        return ApiResponse.success(null, "Media deleted successfully");
     }
 }

@@ -1,4 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../../core/api/api.service';
 import { Booking } from '../../../core/models/booking.model';
@@ -7,7 +9,7 @@ import { CountdownTimerComponent } from '../../../shared/components/countdown-ti
 
 @Component({
   selector: 'app-my-bookings',
-  imports: [CommonModule, StatusBadgeComponent, CountdownTimerComponent],
+  imports: [CommonModule, RouterLink, StatusBadgeComponent, CountdownTimerComponent],
   templateUrl: './my-bookings.html',
   styleUrl: './my-bookings.scss'
 })
@@ -16,7 +18,7 @@ export class MyBookingsComponent implements OnInit, OnDestroy {
   loading = false;
   private pollInterval: any;
 
-  constructor(private apiService: ApiService) { }
+  constructor(private apiService: ApiService, private cd: ChangeDetectorRef) { }
 
   ngOnInit(): void {
     this.loadBookings();
@@ -30,12 +32,23 @@ export class MyBookingsComponent implements OnInit, OnDestroy {
 
   loadBookings(): void {
     this.loading = true;
-    this.apiService.getMyBookings().subscribe({
+    this.apiService.getMyBookings().pipe(finalize(() => {
+      this.loading = false;
+      this.cd.detectChanges();
+    })).subscribe({
       next: (bookings) => {
         this.bookings = bookings;
-        this.loading = false;
       },
-      error: () => this.loading = false
+      error: () => console.error('my-bookings load error')
+    });
+  }
+
+  pay(bookingId: number): void {
+    this.apiService.createVnPayUrl(bookingId).subscribe({
+      next: (url) => {
+        if (url) window.location.href = url;
+      },
+      error: (err) => console.error('Failed to get payment URL', err)
     });
   }
 }

@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 export const authConfig: AuthConfig = {
     issuer: environment.keycloak.issuer,
     redirectUri: environment.keycloak.redirectUri,
+    postLogoutRedirectUri: environment.keycloak.redirectUri,
     clientId: environment.keycloak.clientId,
     responseType: environment.keycloak.responseType,
     scope: environment.keycloak.scope,

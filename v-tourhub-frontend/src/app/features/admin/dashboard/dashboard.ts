@@ -15,7 +15,7 @@ export class DashboardComponent implements OnInit {
   constructor(private apiService: ApiService) { }
 
   ngOnInit(): void {
-    this.apiService.getAllBookings({ size: 1 }).subscribe({
+    this.apiService.getAllBookings(0, 1).subscribe({
       next: (page) => this.totalBookings = page.totalElements
     });
   }

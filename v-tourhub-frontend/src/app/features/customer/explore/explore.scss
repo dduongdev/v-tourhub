@@ -1,0 +1,17 @@
+// Card link wrapper - Full card clickable without invisible overlays
+.card-premium-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+
+    &:hover {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    // Reset hover effects to apply via the wrapper
+    .card-premium {
+        height: 100%;
+    }
+}

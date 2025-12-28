@@ -1,0 +1,20 @@
+<div class="container mt-5">
+    <div class="text-center">
+        <h1>Welcome to V-TourHub</h1>
+        <p class="lead">Discover amazing destinations and book your perfect tour</p>
+
+        @if (!isAuthenticated()) {
+        <div class="mt-4">
+            <button class="btn btn-primary btn-lg" (click)="login()">
+                Login to Continue
+            </button>
+        </div>
+        } @else {
+        <div class="mt-4">
+            <a routerLink="/explore" class="btn btn-primary btn-lg">
+                Explore Destinations
+            </a>
+        </div>
+        }
+    </div>
+</div>

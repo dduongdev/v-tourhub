@@ -1,0 +1,124 @@
+<div class="container pb-5">
+    <!-- DEBUG BLOCK -->
+    <div class="alert alert-info small font-monospace">
+        DEBUG: Loading={{loading}} Service={{service ? 'Loaded' : 'Null'}} ID={{service?.id}}
+    </div>
+
+    @if (loading) {
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    } @else if (service) {
+    <!-- Hero Section -->
+    <div class="page-header text-start mb-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <a routerLink="/explore" class="text-secondary text-decoration-none small"><i class="bi bi-arrow-left"></i>
+                Back to Explore</a>
+            @if (service.destination) {
+            <span class="text-muted">/</span>
+            <a [routerLink]="['/destination', service.destination.id]"
+                class="text-secondary text-decoration-none small">{{ service.destination.name }}</a>
+            }
+        </div>
+        <h1 class="page-title text-start mb-2">{{ service.name }}</h1>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold">{{
+                service.type }}</span>
+            @if (service.destination) {
+            <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ service.destination.city
+                }}</span>
+            }
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Media & Details -->
+        <div class="col-lg-8">
+            <div class="card-premium h-auto mb-4">
+                <div class="card-img-wrapper" style="height: 400px;">
+                    @if (service.mediaList && service.mediaList.length > 0) {
+                    <img [src]="service.mediaList[0].url" [alt]="service.name"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                    } @else {
+                    <span class="display-1 text-secondary"><i class="bi bi-image"></i></span>
+                    }
+                </div>
+            </div>
+
+            <div class="card-premium h-auto p-4">
+                <h3 class="fw-bold mb-3">About this experience</h3>
+                <p class="text-secondary" style="white-space: pre-line;">{{ service.description }}</p>
+
+                @if (service.attributes) {
+                <hr class="my-4 border-secondary opacity-10">
+                <h4 class="fw-bold mb-3">Highlights</h4>
+                <div class="row g-3">
+                    @for (attr of service.attributes | keyvalue; track attr.key) {
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-2 text-secondary">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span class="fw-bold text-dark">{{ attr.key }}:</span> {{ attr.value }}
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- Right Column: Booking Card -->
+        <div class="col-lg-4">
+            <div class="card-premium h-auto p-4 sticky-top" style="top: 2rem; z-index: 10;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="text-muted">Starting from</span>
+                    <div class="text-end">
+                        <h2 class="text-primary fw-bold mb-0">{{ service.price | number }} VND</h2>
+                        <small class="text-muted">per person</small>
+                    </div>
+                </div>
+
+                <hr class="border-secondary opacity-10 my-3">
+
+                <!-- Inventory / Availability List -->
+                <!-- Inventory / Availability List -->
+                @if (inventoryList.length > 0) {
+                <div class="mb-4">
+                    <h5 class="fw-bold mb-3">Availability</h5>
+                    <div class="list-group list-group-flush">
+                        @for (inv of inventoryList; track inv.date) {
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold">{{ inv.date | date:'mediumDate' }}</div>
+                                <div class="small" [class.text-success]="inv.availableStock > 0"
+                                    [class.text-danger]="inv.availableStock === 0">
+                                    {{ inv.availableStock > 0 ? inv.availableStock + ' spots left' : 'Sold Out' }}
+                                </div>
+                            </div>
+                            <a [routerLink]="['/booking']"
+                                [queryParams]="{serviceId: service.id, checkInDate: inv.date}" class="btn btn-sm"
+                                [class.btn-primary]="inv.availableStock > 0"
+                                [class.btn-outline-secondary]="inv.availableStock === 0"
+                                [class.disabled]="inv.availableStock === 0">
+                                Book
+                            </a>
+                        </div>
+                        }
+                    </div>
+
+                    @if (inventoryList.length > 0) {
+                    <button class="btn btn-outline-primary w-100 mt-3" (click)="loadMore()" [disabled]="loadingMore">
+                        {{ loadingMore ? 'Loading...' : 'Load More Dates' }}
+                    </button>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    } @else {
+    <div class="empty-state">
+        <h3>Service not found</h3>
+        <a routerLink="/explore" class="btn btn-outline-primary mt-3">Back to Explore</a>
+    </div>
+    }
+</div>

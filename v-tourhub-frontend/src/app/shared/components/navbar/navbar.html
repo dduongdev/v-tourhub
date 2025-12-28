@@ -13,9 +13,8 @@
             <a class="nav-link" routerLink="/admin/destinations">Destinations</a>
             <a class="nav-link" routerLink="/admin/services">Services</a>
             <a class="nav-link" routerLink="/admin/bookings">Bookings</a>
-            }
-
-            @if (hasRole('customer')) {
+            } @else {
+            <!-- Customer links for non-admin users -->
             <a class="nav-link" routerLink="/explore">Explore</a>
             <a class="nav-link" routerLink="/my-bookings">My Bookings</a>
             <a class="nav-link" routerLink="/profile">Profile</a>
