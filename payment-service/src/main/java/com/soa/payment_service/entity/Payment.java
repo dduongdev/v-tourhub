@@ -4,6 +4,7 @@ import com.soa.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
@@ -17,7 +18,7 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private Long bookingId;
 
-    private String userId; 
+    private String userId;
 
     @Column(nullable = false)
     private BigDecimal amount;
@@ -30,5 +31,14 @@ public class Payment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
-    private String gatewayTransactionId; 
+    private String gatewayTransactionId;
+
+    // Refund tracking fields
+    private LocalDateTime paidAt;
+    private LocalDateTime refundedAt;
+    private BigDecimal refundAmount;
+    private String refundTransactionId;
+
+    @Column(columnDefinition = "TEXT")
+    private String refundReason;
 }

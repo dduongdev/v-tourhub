@@ -23,6 +23,7 @@ public class RabbitMQConfig {
 
     public static final String QUEUE_PAYMENT_FAILED = "payment.failed.queue";
     public static final String ROUTING_KEY_PAYMENT_FAILED = "payment.failed";
+    public static final String ROUTING_KEY_REFUND_REQUESTED = "refund.requested";
 
     public static final String ROUTING_KEY_CONFIRMED = "booking.confirmed";
 

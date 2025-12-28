@@ -23,6 +23,7 @@ import com.soa.payment_service.repository.PaymentRepository;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,16 +35,16 @@ import java.util.*;
 public class PaymentService {
 
     private final PaymentRepository paymentRepo;
-    private final VNPayConfig vnpayConfig; 
+    private final VNPayConfig vnpayConfig;
     private final EventPublisherService eventPublisher;
 
     public String createVnPayUrl(Long bookingId, HttpServletRequest request) {
         Payment payment = paymentRepo.findByBookingId(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
-
         if (payment.getStatus() != PaymentStatus.CONFIRMED) {
-            throw new BusinessException("Payment is not ready or has been processed. Current status: " + payment.getStatus());
+            throw new BusinessException(
+                    "Payment is not ready or has been processed. Current status: " + payment.getStatus());
         }
 
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
@@ -54,11 +55,11 @@ public class PaymentService {
         }
 
         long amount = payment.getAmount().longValue() * 100;
-        
-        String vnp_TxnRef = String.valueOf(bookingId); 
+
+        String vnp_TxnRef = String.valueOf(bookingId);
         String vnp_IpAddr = vnpayConfig.getIpAddress(request);
         String vnp_TmnCode = vnpayConfig.getVnp_TmnCode();
-        
+
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", vnpayConfig.getVnp_Version());
         vnp_Params.put("vnp_Command", vnpayConfig.getVnp_Command());
@@ -77,7 +78,7 @@ public class PaymentService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
         String vnp_CreateDate = now.format(formatter);
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
-        
+
         String vnp_ExpireDate = now.plusMinutes(15).format(formatter);
         vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
 
@@ -106,11 +107,11 @@ public class PaymentService {
                 }
             }
         }
-        
+
         String queryUrl = query.toString();
         String vnp_SecureHash = vnpayConfig.hmacSHA512(vnpayConfig.getVnp_HashSecret(), hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
-        
+
         return vnpayConfig.getVnp_PayUrl() + "?" + queryUrl;
     }
 
@@ -135,22 +136,75 @@ public class PaymentService {
 
         if ("00".equals(vnp_ResponseCode)) {
             log.info("Payment SUCCESS for booking {}", bookingId);
-            
+
             payment.setStatus(PaymentStatus.COMPLETED);
             payment.setMethod(PaymentMethod.VNPAY);
             payment.setGatewayTransactionId(queryParams.get("vnp_TransactionNo"));
+            payment.setPaidAt(LocalDateTime.now()); // ← SET PAID TIMESTAMP
             paymentRepo.save(payment);
 
             publishPaymentEvent(payment, RabbitMQConfig.ROUTING_KEY_PAYMENT_COMPLETED, "SUCCESS");
-            
+
             return payment;
         } else {
             log.warn("Payment FAILED for booking {} with code {}", bookingId, vnp_ResponseCode);
-            
+
             handlePaymentFailed(payment, "VNPay Response Code: " + vnp_ResponseCode);
-            
+
             throw new RuntimeException("Payment Failed at Gateway");
         }
+    }
+
+    /**
+     * Initiate refund for a completed payment
+     * 
+     * @param bookingId    - booking ID to refund
+     * @param reason       - reason for refund
+     * @param refundAmount - amount to refund (can be partial)
+     */
+    @Transactional
+    public void initiateRefund(Long bookingId, String reason, BigDecimal refundAmount) {
+        Payment payment = paymentRepo.findByBookingId(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found for booking: " + bookingId));
+
+        // Validation: Can only refund COMPLETED payments
+        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+            throw new BusinessException(
+                    "Cannot refund a payment that is not completed. Current status: " + payment.getStatus());
+        }
+
+        // Validation: Refund amount cannot exceed original payment
+        if (refundAmount.compareTo(payment.getAmount()) > 0) {
+            throw new BusinessException("Refund amount cannot exceed original payment amount");
+        }
+
+        // TODO: Call VNPay Refund API (placeholder for now)
+        // In production, you would call VNPay's refund endpoint here
+        String refundTxnId = "REFUND_" + System.currentTimeMillis(); // Placeholder transaction ID
+        log.warn("REFUND API NOT IMPLEMENTED YET. Using placeholder transaction ID: {}", refundTxnId);
+
+        // Update payment with refund information
+        payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setRefundAmount(refundAmount);
+        payment.setRefundTransactionId(refundTxnId);
+        payment.setRefundedAt(LocalDateTime.now());
+        payment.setRefundReason(reason);
+        paymentRepo.save(payment);
+
+        log.info("Refund initiated for Booking ID: {}, Amount: {}, Reason: {}", bookingId, refundAmount, reason);
+
+        // Publish RefundCompletedEvent
+        com.soa.common.event.RefundCompletedEvent event = com.soa.common.event.RefundCompletedEvent.builder()
+                .bookingId(bookingId)
+                .userId(payment.getUserId())
+                .refundAmount(refundAmount)
+                .refundTransactionId(refundTxnId)
+                .build();
+
+        eventPublisher.saveEventToOutbox("Payment", payment.getId().toString(),
+                RabbitMQConfig.ROUTING_KEY_REFUND_COMPLETED, event);
+
+        log.info("Published RefundCompletedEvent for Booking ID: {}", bookingId);
     }
 
     private void handlePaymentFailed(Long bookingId, String reason) {
@@ -184,26 +238,25 @@ public class PaymentService {
         }
 
         eventPublisher.saveEventToOutbox(
-            "Payment", 
-            payment.getId().toString(), 
-            routingKey,
-            event
-        );
+                "Payment",
+                payment.getId().toString(),
+                routingKey,
+                event);
         log.info("Published {} event for Booking ID {}", routingKey, payment.getBookingId());
     }
 
     private boolean verifySignature(Map<String, String> queryParams, String vnp_SecureHash) {
         Map<String, String> fields = new HashMap<>(queryParams);
-        
+
         fields.remove("vnp_SecureHashType");
         fields.remove("vnp_SecureHash");
 
         List<String> fieldNames = new ArrayList<>(fields.keySet());
         Collections.sort(fieldNames);
-        
+
         StringBuilder hashData = new StringBuilder();
         Iterator<String> itr = fieldNames.iterator();
-        
+
         while (itr.hasNext()) {
             String fieldName = itr.next();
             String fieldValue = fields.get(fieldName);
@@ -220,23 +273,24 @@ public class PaymentService {
                 }
             }
         }
-        
+
         String signValue = vnpayConfig.hmacSHA512(vnpayConfig.getVnp_HashSecret(), hashData.toString());
-        
+
         return signValue.equals(vnp_SecureHash);
     }
 
     @Transactional
     public void handleBookingCancellation(BookingCancelledEvent event) {
         paymentRepo.findByBookingId(event.getBookingId()).ifPresent(payment -> {
-            
+
             if (payment.getStatus() == PaymentStatus.CONFIRMED) {
                 payment.setStatus(PaymentStatus.CANCELLED);
                 paymentRepo.save(payment);
                 log.info("Payment for Booking ID {} has been cancelled.", event.getBookingId());
 
             } else if (payment.getStatus() == PaymentStatus.COMPLETED) {
-                log.info("Booking ID {} was cancelled after payment. Initiating refund process...", event.getBookingId());
+                log.info("Booking ID {} was cancelled after payment. Initiating refund process...",
+                        event.getBookingId());
             }
         });
     }
@@ -244,14 +298,15 @@ public class PaymentService {
     @Transactional
     public void cancelPaymentForBooking(Long bookingId) {
         paymentRepo.findByBookingId(bookingId).ifPresent(payment -> {
-            
+
             if (payment.getStatus() == PaymentStatus.CONFIRMED) {
-                payment.setStatus(PaymentStatus.CANCELLED); 
+                payment.setStatus(PaymentStatus.CANCELLED);
                 paymentRepo.save(payment);
                 log.info("Payment for Booking ID {} was cancelled due to booking failure.", bookingId);
             } else {
-                log.warn("Received booking failure event for Booking ID {}, but payment status is already {}. No action taken.", 
-                         bookingId, payment.getStatus());
+                log.warn(
+                        "Received booking failure event for Booking ID {}, but payment status is already {}. No action taken.",
+                        bookingId, payment.getStatus());
             }
         });
     }
@@ -268,9 +323,9 @@ public class PaymentService {
                 .userId(event.getUserId())
                 .amount(event.getAmount())
                 .currency(event.getCurrency())
-                .status(PaymentStatus.CONFIRMED) 
+                .status(PaymentStatus.CONFIRMED)
                 .build();
-        
+
         paymentRepo.save(payment);
         log.info("Created and Confirmed payment for booking {}", event.getBookingId());
     }

@@ -10,12 +10,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
 @Table(name = "inventories", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"service_id", "date"}) 
+        @UniqueConstraint(columnNames = { "service_id", "date" })
 })
 @Getter
 @Setter
@@ -29,9 +30,12 @@ public class Inventory extends BaseEntity {
 
     private int totalStock;
     private int bookedStock;
-    private int lockedStock;
+    private Integer lockedStock;
 
-    public int getAvailableStock() {
+    @Version
+    private Long version; // Optimistic locking to prevent concurrent update issues
+
+    public Integer getAvailableStock() {
         return totalStock - bookedStock - lockedStock;
     }
 }

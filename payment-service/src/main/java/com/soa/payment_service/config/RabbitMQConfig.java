@@ -58,12 +58,27 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_READY_FOR_PAYMENT = "booking.ready_for_payment";
 
     @Bean
-    public Queue readyForPaymentQueue() { 
+    public Queue readyForPaymentQueue() {
         return new Queue(QUEUE_READY_FOR_PAYMENT, true);
-     }
+    }
 
     @Bean
     public Binding bindingReadyForPayment(Queue readyForPaymentQueue, TopicExchange exchange) {
         return BindingBuilder.bind(readyForPaymentQueue).to(exchange).with(ROUTING_KEY_READY_FOR_PAYMENT);
+    }
+
+    // Refund queues and routing keys
+    public static final String QUEUE_REFUND_REQUESTED = "payment.refund.requested.queue";
+    public static final String ROUTING_KEY_REFUND_REQUESTED = "refund.requested";
+    public static final String ROUTING_KEY_REFUND_COMPLETED = "refund.completed";
+
+    @Bean
+    public Queue refundRequestedQueue() {
+        return new Queue(QUEUE_REFUND_REQUESTED, true);
+    }
+
+    @Bean
+    public Binding bindingRefundRequested(Queue refundRequestedQueue, TopicExchange exchange) {
+        return BindingBuilder.bind(refundRequestedQueue).to(exchange).with(ROUTING_KEY_REFUND_REQUESTED);
     }
 }

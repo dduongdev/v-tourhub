@@ -25,9 +25,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -62,10 +64,15 @@ public class BookingService {
             }
 
             InternalServiceResponse serviceInfo = catalogResponse.getData();
+            int quantityToLock = calculateQuantity(request, serviceInfo.getType());
 
-            int quantityToLock = determineQuantity(request, serviceInfo.getType());
+            // Validate business rules
+            validateBookingRequest(request, serviceInfo.getType());
 
-            validateBookingRequest(request, serviceInfo, quantityToLock);
+            // Additional availability check
+            if (Boolean.FALSE.equals(serviceInfo.getAvailability())) {
+                throw new BusinessException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
+            }
 
             BigDecimal totalPrice = calculateTotalPrice(serviceInfo.getPrice(), quantityToLock, request.getGuests(),
                     serviceInfo.getType());
@@ -117,7 +124,7 @@ public class BookingService {
         }
     }
 
-    private int determineQuantity(CreateBookingRequest request, String serviceType) {
+    private int calculateQuantity(CreateBookingRequest request, String serviceType) {
         // Ưu tiên quantity do user gửi lên
         if (request.getQuantity() != null && request.getQuantity() > 0) {
             return request.getQuantity();
@@ -131,16 +138,38 @@ public class BookingService {
         }
     }
 
-    private void validateBookingRequest(CreateBookingRequest request, InternalServiceResponse serviceInfo,
-            int quantity) {
-        if (Boolean.FALSE.equals(serviceInfo.getAvailability())) {
-            throw new BusinessException("Dịch vụ này hiện đang tạm ngưng phục vụ.");
+    private void validateBookingRequest(CreateBookingRequest request, String serviceType) {
+        LocalDate today = LocalDate.now();
+
+        // ✅ Validate past dates
+        if (request.getCheckInDate().isBefore(today)) {
+            throw new BusinessException("Ngày check-in không thể là ngày trong quá khứ.");
         }
 
-        if ("HOTEL".equalsIgnoreCase(serviceInfo.getType())) {
-            if (request.getCheckOutDate() == null || !request.getCheckInDate().isBefore(request.getCheckOutDate())) {
-                throw new BusinessException("Ngày Check-out phải sau ngày Check-in đối với Khách sạn.");
+        // ✅ Validate max booking window (1 year in advance)
+        if (request.getCheckInDate().isAfter(today.plusYears(1))) {
+            throw new BusinessException("Không thể đặt dịch vụ quá 1 năm trước.");
+        }
+
+        if (request.getCheckOutDate() != null) {
+            if (request.getCheckOutDate().isBefore(request.getCheckInDate())) {
+                throw new BusinessException("Ngày check-out phải sau ngày check-in.");
             }
+
+            // ✅ Validate max duration for HOTEL (30 nights)
+            if ("HOTEL".equalsIgnoreCase(serviceType)) {
+                long nights = java.time.temporal.ChronoUnit.DAYS.between(
+                        request.getCheckInDate(),
+                        request.getCheckOutDate());
+                if (nights > 30) {
+                    throw new BusinessException("Không thể đặt phòng khách sạn quá 30 đêm.");
+                }
+            }
+        }
+
+        // ✅ Validate guests count
+        if (request.getGuests() != null && request.getGuests() <= 0) {
+            throw new BusinessException("Số lượng khách phải lớn hơn 0.");
         }
     }
 
@@ -152,18 +181,11 @@ public class BookingService {
     public List<BookingResponse> getUserBookings(String userId) {
         List<Booking> bookings = bookingRepo.findByUserIdOrderByCreatedAtDesc(userId);
 
-        List<BookingResponse> responses = new ArrayList<>();
-        for (Booking booking : bookings) {
-            ApiResponse<InternalServiceResponse> catalogResponse = catalogClient
-                    .getServiceDetail(booking.getServiceId());
-            String serviceName = (catalogResponse != null && catalogResponse.getData() != null)
-                    ? catalogResponse.getData().getName()
-                    : "Service ID: " + booking.getServiceId();
-
-            responses.add(mapToDto(booking, serviceName));
-        }
-
-        return responses;
+        // ✅ FIXED: Use denormalized serviceName instead of calling CatalogClient (N+1
+        // problem)
+        return bookings.stream()
+                .map(booking -> mapToDto(booking, booking.getServiceName()))
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -178,31 +200,86 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.COMPLETED) {
             throw new BusinessException("Không thể hủy đơn hàng đã hoàn thành.");
         }
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            throw new BusinessException("Đơn hàng này đã được hoàn tiền.");
+        }
 
         String oldStatus = booking.getStatus().name();
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepo.save(booking);
+        LocalDateTime now = LocalDateTime.now();
 
-        log.info("Booking cancelled by user: ID={}, OldStatus={}", bookingId, oldStatus);
+        // Handle CONFIRMED bookings - need refund
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            log.info("Cancelling CONFIRMED booking {}. Initiating refund process...", bookingId);
 
-        BookingCancelledEvent event = BookingCancelledEvent.builder()
-                .bookingId(bookingId)
-                .serviceId(booking.getServiceId())
-                .userId(userId)
-                .reason("User requested cancellation")
-                .previousStatus(oldStatus)
-                .checkIn(booking.getCheckInDate())
-                .checkOut(booking.getCheckOutDate())
-                .quantity(booking.getQuantity())
-                .customerEmail(booking.getCustomerEmail())
-                .serviceName(booking.getServiceName())
-                .build();
+            booking.setStatus(BookingStatus.REFUNDED);
+            booking.setCancelledAt(now);
+            booking.setCancellationReason("User requested cancellation");
+            bookingRepo.save(booking);
 
-        eventPublisher.saveEventToOutbox(
-                "Booking",
-                booking.getId().toString(),
-                ROUTING_KEY_CANCELLED,
-                event);
+            // Trigger refund saga
+            com.soa.common.event.RefundRequestedEvent refundEvent = com.soa.common.event.RefundRequestedEvent.builder()
+                    .bookingId(bookingId)
+                    .userId(userId)
+                    .refundAmount(booking.getTotalPrice())
+                    .reason("User cancellation")
+                    .customerEmail(booking.getCustomerEmail())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    bookingId.toString(),
+                    RabbitMQConfig.ROUTING_KEY_REFUND_REQUESTED,
+                    refundEvent);
+
+            log.info("Published RefundRequestedEvent for Booking ID {}", bookingId);
+
+            // Also release inventory
+            BookingCancelledEvent inventoryEvent = BookingCancelledEvent.builder()
+                    .bookingId(bookingId)
+                    .serviceId(booking.getServiceId())
+                    .userId(userId)
+                    .reason("User requested cancellation (with refund)")
+                    .previousStatus(oldStatus)
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity())
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    booking.getId().toString(),
+                    ROUTING_KEY_CANCELLED,
+                    inventoryEvent);
+        } else {
+            // Handle PENDING_PAYMENT and INITIATED - normal cancellation
+            booking.setStatus(BookingStatus.CANCELLED);
+            booking.setCancelledAt(now);
+            booking.setCancellationReason("User requested cancellation");
+            bookingRepo.save(booking);
+
+            log.info("Booking cancelled by user: ID={}, OldStatus={}", bookingId, oldStatus);
+
+            BookingCancelledEvent event = BookingCancelledEvent.builder()
+                    .bookingId(bookingId)
+                    .serviceId(booking.getServiceId())
+                    .userId(userId)
+                    .reason("User requested cancellation")
+                    .previousStatus(oldStatus)
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity())
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    booking.getId().toString(),
+                    ROUTING_KEY_CANCELLED,
+                    event);
+        }
     }
 
     private BookingResponse mapToDto(Booking entity, String serviceName) {
@@ -228,6 +305,7 @@ public class BookingService {
 
         if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             booking.setStatus(BookingStatus.CONFIRMED);
+            booking.setConfirmedAt(LocalDateTime.now()); // ← SET CONFIRMATION TIMESTAMP
 
             log.info("Booking {} CONFIRMED. Transaction: {}", bookingId, transactionId);
 
@@ -387,14 +465,13 @@ public class BookingService {
     @Transactional
     public void moveToPendingPayment(Long bookingId) {
         int rowsAffected = bookingRepo.updateStatusIfCurrentStatusIs(
-            bookingId, 
-            BookingStatus.PENDING_PAYMENT, 
-            BookingStatus.INITIATED
-        );
-        
+                bookingId,
+                BookingStatus.PENDING_PAYMENT,
+                BookingStatus.INITIATED);
+
         if (rowsAffected > 0) {
             log.info("Booking {} moved to PENDING_PAYMENT.", bookingId);
-            Booking booking = getBooking(bookingId); 
+            Booking booking = getBooking(bookingId);
             BookingReadyForPaymentEvent event = BookingReadyForPaymentEvent.builder()
                     .bookingId(bookingId)
                     .userId(booking.getUserId())
@@ -405,13 +482,12 @@ public class BookingService {
                     .serviceName(booking.getServiceName())
                     .checkIn(booking.getCheckInDate())
                     .build();
-            
+
             eventPublisher.saveEventToOutbox(
-                "Booking",
-                bookingId.toString(),
-                RabbitMQConfig.ROUTING_KEY_READY_FOR_PAYMENT,
-                event
-            );
+                    "Booking",
+                    bookingId.toString(),
+                    RabbitMQConfig.ROUTING_KEY_READY_FOR_PAYMENT,
+                    event);
         } else {
             log.warn("Could not move Booking {} to PENDING_PAYMENT. It was not in INITIATED state.", bookingId);
         }

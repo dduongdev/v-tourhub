@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableDiscoveryClient
 @EnableFeignClients
 @EnableJpaAuditing
-@EnableScheduling
+@EnableScheduling // Enable scheduled tasks (e.g., BookingCleanupScheduler)
 public class BookingServiceApplication {
 
 	public static void main(String[] args) {

@@ -18,22 +18,22 @@ import java.time.LocalDateTime;
 public class Booking extends BaseEntity {
 
     @Column(nullable = false)
-    private String userId; 
+    private String userId;
 
     @Column(nullable = false)
     private Long serviceId;
 
     private String serviceName;
 
-    private Long providerId; 
+    private Long providerId;
 
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
 
     private LocalDate checkInDate;
-    
+
     private LocalDate checkOutDate;
-    
+
     private Integer guests;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 1")
@@ -42,10 +42,15 @@ public class Booking extends BaseEntity {
     private BigDecimal totalPrice;
 
     private String inventoryLockToken;
-    
-    private LocalDateTime expiresAt
-;
+
+    private LocalDateTime expiresAt;
+
     private String customerName;
     private String customerEmail;
     private String customerPhone;
+
+    // Audit timestamps
+    private LocalDateTime cancelledAt;
+    private String cancellationReason;
+    private LocalDateTime confirmedAt;
 }
