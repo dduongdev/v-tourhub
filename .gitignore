@@ -1,4 +1,3 @@
-docs/
 .env
 
 # --- JAVA & MAVEN ---
@@ -38,4 +37,9 @@ Thumbs.db
 *.log
 logs/
 
-v-tourhub-frontend/
+# --- FRONTEND (Only ignore build artifacts, NOT source code) ---
+v-tourhub-frontend/node_modules/
+v-tourhub-frontend/dist/
+v-tourhub-frontend/.angular/
+v-tourhub-frontend/.env*
+v-tourhub-frontend/.vscode/
