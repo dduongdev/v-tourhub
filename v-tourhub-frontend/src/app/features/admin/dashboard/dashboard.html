@@ -1,0 +1,23 @@
+<div class="container mt-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Total Bookings</h5>
+                    <h2>{{ totalBookings }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h3>Quick Links</h3>
+        <div class="d-flex gap-2">
+            <a routerLink="/admin/destinations" class="btn btn-primary">Manage Destinations</a>
+            <a routerLink="/admin/services" class="btn btn-primary">Manage Services</a>
+            <a routerLink="/admin/bookings" class="btn btn-primary">View All Bookings</a>
+        </div>
+    </div>
+</div>

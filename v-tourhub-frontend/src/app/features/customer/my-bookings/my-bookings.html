@@ -1,0 +1,38 @@
+<div class="container mt-4">
+    <h1 class="mb-4">My Bookings</h1>
+
+    @if (loading) {
+    <div class="spinner-border"></div>
+    } @else if (bookings.length === 0) {
+    <p>No bookings found.</p>
+    } @else {
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Service</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Expiry</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (booking of bookings; track booking.bookingId) {
+                <tr>
+                    <td>{{ booking.bookingId }}</td>
+                    <td>{{ booking.serviceName }}</td>
+                    <td>{{ booking.totalPrice | number }}</td>
+                    <td><app-status-badge [status]="booking.status" /></td>
+                    <td>
+                        @if (booking.status === 'PENDING') {
+                        <app-countdown-timer [expiresAt]="booking.expiresAt" />
+                        }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>

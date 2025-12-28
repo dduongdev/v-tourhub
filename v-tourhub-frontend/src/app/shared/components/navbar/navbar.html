@@ -1,0 +1,30 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">V-TourHub</a>
+
+        @if (isAuthenticated()) {
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text me-3">
+                Hi, {{ userName() }}
+            </span>
+
+            @if (hasRole('admin')) {
+            <a class="nav-link" routerLink="/admin/dashboard">Dashboard</a>
+            <a class="nav-link" routerLink="/admin/destinations">Destinations</a>
+            <a class="nav-link" routerLink="/admin/services">Services</a>
+            <a class="nav-link" routerLink="/admin/bookings">Bookings</a>
+            }
+
+            @if (hasRole('customer')) {
+            <a class="nav-link" routerLink="/explore">Explore</a>
+            <a class="nav-link" routerLink="/my-bookings">My Bookings</a>
+            <a class="nav-link" routerLink="/profile">Profile</a>
+            }
+
+            <button class="btn btn-outline-light btn-sm ms-2" (click)="logout()">
+                Logout
+            </button>
+        </div>
+        }
+    </div>
+</nav>

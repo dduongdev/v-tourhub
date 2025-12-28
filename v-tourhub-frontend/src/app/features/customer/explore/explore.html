@@ -1,0 +1,25 @@
+<div class="container mt-4">
+    <h1 class="mb-4">Explore K Destinations</h1>
+
+    @if (loading) {
+    <div class="text-center">
+        <div class="spinner-border" role="status"></div>
+    </div>
+    } @else if (destinations.length === 0) {
+    <p>No destinations available.</p>
+    } @else {
+    <div class="row">
+        @for (dest of destinations; track dest.id) {
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ dest.name }}</h5>
+                    <p class="card-text">{{ dest.description || 'Beautiful destination' }}</p>
+                    <a [routerLink]="['/destination', dest.id]" class="btn btn-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>

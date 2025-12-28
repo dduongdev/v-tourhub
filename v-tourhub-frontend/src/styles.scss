@@ -1,1 +1,70 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles for V-TourHub */
+
+// Dark Theme Variables
+$bg-dark: #1a1b1f;
+$surface-dark: #2f3033;
+$text-primary: #e3e2e6;
+$text-secondary: #c4c6d0;
+$border-dark: #44474e;
+$primary: #3b82f6;
+$success: #22c55e;
+$warning: #f59e0b;
+$danger: #ef4444;
+
+// Global Reset
+body {
+    margin: 0;
+    font-family: Inter, 'Segoe UI', Roboto, sans-serif;
+    background: $bg-dark;
+    color: $text-primary;
+}
+
+// Dark theme overrides for Bootstrap
+.table {
+    color: $text-primary;
+
+    thead {
+        background: $surface-dark;
+        border-color: $border-dark;
+    }
+
+    tbody tr {
+        background: lighten($bg-dark, 5%);
+        border-color: $border-dark;
+
+        &:hover {
+            background: $surface-dark;
+        }
+    }
+}
+
+.card {
+    background: $surface-dark;
+    border-color: $border-dark;
+    color: $text-primary;
+}
+
+// Notification animations
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
