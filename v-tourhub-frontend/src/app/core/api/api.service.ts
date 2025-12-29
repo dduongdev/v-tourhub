@@ -114,13 +114,13 @@ export class ApiService {
             .pipe(this.unwrap());
     }
 
-    createService(service: Partial<Service>): Observable<Service> {
+    createService(service: Partial<Service>, inventoryConfig?: { totalStock: number; startDate: string; endDate: string }): Observable<Service> {
         // Backend requires destinationId when creating a service: POST /catalog/destinations/{id}/services
         const destId = (service as any)?.destination?.id;
         if (!destId) {
             throw new Error('createService requires destinationId on service.destination.id');
         }
-        return this.addServiceToDestination(destId, service);
+        return this.addServiceToDestination(destId, service, inventoryConfig);
     }
 
     updateService(id: number, service: Partial<Service>): Observable<Service> {
@@ -128,17 +128,27 @@ export class ApiService {
             .pipe(this.unwrap());
     }
 
-    addServiceToDestination(destinationId: number, service: Partial<Service>): Observable<Service> {
+
+    addServiceToDestination(destinationId: number, service: Partial<Service>, inventoryConfig?: { totalStock: number; startDate: string; endDate: string }): Observable<Service> {
         // Sanitize payload to match CreateServiceRequest DTO
-        const payload = {
+        const payload: any = {
             name: service.name,
             description: service.description,
             price: service.price,
             type: service.type,
             availability: service.availability,
             attributes: service.attributes,
-            // inventory is optional in DTO but not in UI form yet (handled separately), so omit or null
         };
+
+        // Include inventory config if provided (matches backend InventoryConfig DTO)
+        if (inventoryConfig && inventoryConfig.totalStock && inventoryConfig.startDate && inventoryConfig.endDate) {
+            payload.inventory = {
+                totalStock: inventoryConfig.totalStock,
+                startDate: inventoryConfig.startDate,
+                endDate: inventoryConfig.endDate
+            };
+        }
+
         return this.http.post<ApiResponse<Service>>(`${this.apiUrl}/catalog/destinations/${destinationId}/services`, payload)
             .pipe(this.unwrap());
     }

@@ -78,9 +78,37 @@ import { Service } from '../../../core/models/service.model';
                         </div>
                      </div>
 
-                     <!-- Inventory Prompt -->
-                     <div class="alert alert-info" *ngIf="!isEdit">
-                        <i class="bi bi-info-circle-fill"></i> You can set inventory availability after saving.
+                     <!-- Inventory Setup Section (New Services Only) -->
+                     <div class="mb-4" *ngIf="!isEdit">
+                        <label class="form-label d-block">Inventory Setup (Optional)</label>
+                        <div class="card bg-light border-0">
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" [(ngModel)]="setupInventoryAfterSave" name="setupInventory" id="setupInventoryCheck">
+                                    <label class="form-check-label" for="setupInventoryCheck">Set up inventory now</label>
+                                </div>
+                                
+                                <div *ngIf="setupInventoryAfterSave">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Total Stock</label>
+                                            <input type="number" class="form-control" [(ngModel)]="inventoryTotal" name="inventoryTotal" min="1" placeholder="e.g. 50">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Start Date</label>
+                                            <input type="date" class="form-control" [(ngModel)]="inventoryStart" name="inventoryStart">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">End Date</label>
+                                            <input type="date" class="form-control" [(ngModel)]="inventoryEnd" name="inventoryEnd">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">
+                                        <i class="bi bi-info-circle"></i> Inventory will be created for each date in the range.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
                      </div>
 
                     <div class="d-flex justify-content-end gap-2">
@@ -136,6 +164,12 @@ export class ServiceFormComponent implements OnInit {
     // Media
     selectedFile: File | null = null;
     uploading = false;
+
+    // Inventory setup (for new services)
+    setupInventoryAfterSave = false;
+    inventoryTotal: number | null = null;
+    inventoryStart = '';
+    inventoryEnd = '';
 
     constructor(
         private route: ActivatedRoute,
@@ -197,14 +231,22 @@ export class ServiceFormComponent implements OnInit {
             this.model.destination = { id: this.destinationId } as any;
         }
 
+        // Build inventory config if user opted to set it up
+        const inventoryConfig = (this.setupInventoryAfterSave && this.inventoryTotal && this.inventoryStart && this.inventoryEnd)
+            ? { totalStock: this.inventoryTotal, startDate: this.inventoryStart, endDate: this.inventoryEnd }
+            : undefined;
+
         const req = this.isEdit
             ? this.api.updateService(this.model.id!, this.model)
-            : this.api.createService(this.model);
+            : this.api.createService(this.model, inventoryConfig);
 
         req.subscribe({
             next: (saved) => {
                 if (!this.isEdit) {
-                    // Redirect to edit to upload media
+                    const msg = inventoryConfig
+                        ? 'Service created with inventory configured!'
+                        : 'Service created successfully!';
+                    alert(msg);
                     this.router.navigate(['/admin/destinations', this.destinationId, 'services', 'edit', saved.id]);
                 } else {
                     this.goBack();
