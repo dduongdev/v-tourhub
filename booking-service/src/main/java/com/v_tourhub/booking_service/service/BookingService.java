@@ -50,10 +50,16 @@ public class BookingService {
 
     @Transactional
     public BookingResponse createBooking(String userId, CreateBookingRequest request) {
-        String lockKey = "lock:inventory:" + request.getServiceId();
+        // Generate unique lock token for this request
+        String lockToken = UUID.randomUUID().toString();
 
-        if (!redisLockService.tryLock(lockKey, 10)) {
-            throw new BusinessException("Hệ thống đang bận xử lý dịch vụ này, vui lòng thử lại sau.");
+        // Fine-grained lock: per service + check-in date (not entire service)
+        String lockKey = String.format("lock:inventory:%d:%s",
+                request.getServiceId(),
+                request.getCheckInDate());
+
+        if (!redisLockService.tryLock(lockKey, lockToken, 15)) {
+            throw new BusinessException("Hệ thống đang bận xử lý ngày này, vui lòng thử lại sau.");
         }
 
         try {
@@ -120,7 +126,11 @@ public class BookingService {
             return mapToDto(savedBooking, serviceInfo.getName());
 
         } finally {
-            redisLockService.unlock(lockKey);
+            // Safe unlock with token validation
+            boolean unlocked = redisLockService.unlock(lockKey, lockToken);
+            if (!unlocked) {
+                log.warn("Could not unlock key={}. Lock may have expired or been taken by another request.", lockKey);
+            }
         }
     }
 
