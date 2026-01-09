@@ -43,7 +43,7 @@ public class RabbitMQConfig {
     public Queue cancellationEmailQueue() {
         return new Queue(QUEUE_CANCELLATION_EMAIL, true);
     }
-    
+
     @Bean
     public Binding bindingCancellationEmail(Queue cancellationEmailQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(cancellationEmailQueue).to(bookingExchange).with(ROUTING_KEY_CANCELLED);
@@ -56,7 +56,7 @@ public class RabbitMQConfig {
     public Queue bookingFailedEmailQueue() {
         return new Queue(QUEUE_BOOKING_FAILED_EMAIL, true);
     }
-    
+
     @Bean
     public Binding bindingBookingFailedEmail(Queue bookingFailedEmailQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(bookingFailedEmailQueue).to(bookingExchange).with(ROUTING_KEY_BOOKING_FAILED);
@@ -69,9 +69,23 @@ public class RabbitMQConfig {
     public Queue readyForPaymentEmailQueue() {
         return new Queue(QUEUE_READY_FOR_PAYMENT_EMAIL, true);
     }
-    
+
     @Bean
     public Binding bindingReadyForPaymentEmail(Queue readyForPaymentEmailQueue, TopicExchange bookingExchange) {
         return BindingBuilder.bind(readyForPaymentEmailQueue).to(bookingExchange).with(ROUTING_KEY_READY_FOR_PAYMENT);
+    }
+
+    // Refund completed email notification
+    public static final String QUEUE_REFUND_COMPLETED_EMAIL = "notification.refund.completed.email.queue";
+    public static final String ROUTING_KEY_REFUND_COMPLETED = "refund.completed";
+
+    @Bean
+    public Queue refundCompletedEmailQueue() {
+        return new Queue(QUEUE_REFUND_COMPLETED_EMAIL, true);
+    }
+
+    @Bean
+    public Binding bindingRefundCompletedEmail(Queue refundCompletedEmailQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(refundCompletedEmailQueue).to(bookingExchange).with(ROUTING_KEY_REFUND_COMPLETED);
     }
 }

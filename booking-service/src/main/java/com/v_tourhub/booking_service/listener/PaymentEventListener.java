@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import com.soa.common.event.PaymentCompletedEvent;
 import com.soa.common.event.PaymentFailedEvent;
+import com.soa.common.event.RefundCompletedEvent;
 import com.v_tourhub.booking_service.config.RabbitMQConfig;
 import com.v_tourhub.booking_service.service.BookingService;
 
@@ -18,7 +19,7 @@ public class PaymentEventListener {
     private final BookingService bookingService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_COMPLETED)
-    public void handlePaymentCompleted(PaymentCompletedEvent event) { 
+    public void handlePaymentCompleted(PaymentCompletedEvent event) {
         log.info("Received PaymentCompletedEvent: {}", event);
         try {
             bookingService.completeBooking(event.getBookingId(), event.getTransactionId());
@@ -37,4 +38,13 @@ public class PaymentEventListener {
         }
     }
 
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_REFUND_COMPLETED)
+    public void handleRefundCompleted(RefundCompletedEvent event) {
+        log.info("Received RefundCompletedEvent: {}", event);
+        try {
+            bookingService.handleRefundCompleted(event.getBookingId(), event.getRefundTransactionId());
+        } catch (Exception e) {
+            log.error("Error processing refund completed event", e);
+        }
+    }
 }

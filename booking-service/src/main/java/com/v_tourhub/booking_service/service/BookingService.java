@@ -213,83 +213,40 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.REFUNDED) {
             throw new BusinessException("Đơn hàng này đã được hoàn tiền.");
         }
+        // User cannot cancel CONFIRMED bookings - only admin can
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new BusinessException("Đơn hàng đã thanh toán không thể hủy. Vui lòng liên hệ Admin.");
+        }
 
+        // Only INITIATED and PENDING_PAYMENT can be cancelled by user
         String oldStatus = booking.getStatus().name();
         LocalDateTime now = LocalDateTime.now();
 
-        // Handle CONFIRMED bookings - need refund
-        if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            log.info("Cancelling CONFIRMED booking {}. Initiating refund process...", bookingId);
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelledAt(now);
+        booking.setCancellationReason("User requested cancellation");
+        bookingRepo.save(booking);
 
-            booking.setStatus(BookingStatus.REFUNDED);
-            booking.setCancelledAt(now);
-            booking.setCancellationReason("User requested cancellation");
-            bookingRepo.save(booking);
+        log.info("Booking cancelled by user: ID={}, OldStatus={}", bookingId, oldStatus);
 
-            // Trigger refund saga
-            com.soa.common.event.RefundRequestedEvent refundEvent = com.soa.common.event.RefundRequestedEvent.builder()
-                    .bookingId(bookingId)
-                    .userId(userId)
-                    .refundAmount(booking.getTotalPrice())
-                    .reason("User cancellation")
-                    .customerEmail(booking.getCustomerEmail())
-                    .build();
+        BookingCancelledEvent event = BookingCancelledEvent.builder()
+                .bookingId(bookingId)
+                .serviceId(booking.getServiceId())
+                .userId(userId)
+                .reason("User requested cancellation")
+                .previousStatus(oldStatus)
+                .checkIn(booking.getCheckInDate())
+                .checkOut(booking.getCheckOutDate())
+                .quantity(booking.getQuantity())
+                .customerEmail(booking.getCustomerEmail())
+                .serviceName(booking.getServiceName())
+                .build();
 
-            eventPublisher.saveEventToOutbox(
-                    "Booking",
-                    bookingId.toString(),
-                    RabbitMQConfig.ROUTING_KEY_REFUND_REQUESTED,
-                    refundEvent);
-
-            log.info("Published RefundRequestedEvent for Booking ID {}", bookingId);
-
-            // Also release inventory
-            BookingCancelledEvent inventoryEvent = BookingCancelledEvent.builder()
-                    .bookingId(bookingId)
-                    .serviceId(booking.getServiceId())
-                    .userId(userId)
-                    .reason("User requested cancellation (with refund)")
-                    .previousStatus(oldStatus)
-                    .checkIn(booking.getCheckInDate())
-                    .checkOut(booking.getCheckOutDate())
-                    .quantity(booking.getQuantity())
-                    .customerEmail(booking.getCustomerEmail())
-                    .serviceName(booking.getServiceName())
-                    .build();
-
-            eventPublisher.saveEventToOutbox(
-                    "Booking",
-                    booking.getId().toString(),
-                    ROUTING_KEY_CANCELLED,
-                    inventoryEvent);
-        } else {
-            // Handle PENDING_PAYMENT and INITIATED - normal cancellation
-            booking.setStatus(BookingStatus.CANCELLED);
-            booking.setCancelledAt(now);
-            booking.setCancellationReason("User requested cancellation");
-            bookingRepo.save(booking);
-
-            log.info("Booking cancelled by user: ID={}, OldStatus={}", bookingId, oldStatus);
-
-            BookingCancelledEvent event = BookingCancelledEvent.builder()
-                    .bookingId(bookingId)
-                    .serviceId(booking.getServiceId())
-                    .userId(userId)
-                    .reason("User requested cancellation")
-                    .previousStatus(oldStatus)
-                    .checkIn(booking.getCheckInDate())
-                    .checkOut(booking.getCheckOutDate())
-                    .quantity(booking.getQuantity())
-                    .customerEmail(booking.getCustomerEmail())
-                    .serviceName(booking.getServiceName())
-                    .build();
-
-            eventPublisher.saveEventToOutbox(
-                    "Booking",
-                    booking.getId().toString(),
-                    ROUTING_KEY_CANCELLED,
-                    event);
-        }
+        eventPublisher.saveEventToOutbox(
+                "Booking",
+                booking.getId().toString(),
+                ROUTING_KEY_CANCELLED,
+                event);
     }
 
     private BookingResponse mapToDto(Booking entity, String serviceName) {
@@ -392,6 +349,24 @@ public class BookingService {
         }
     }
 
+    // =========================================================================
+    // 6. SAGA STEP: REFUND COMPLETED
+    // =========================================================================
+    @Transactional
+    public void handleRefundCompleted(Long bookingId, String refundTransactionId) {
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            log.info("Refund COMPLETED for Booking {}. Transaction ID: {}", bookingId, refundTransactionId);
+            booking.setStatus(BookingStatus.REFUNDED);
+            bookingRepo.save(booking);
+        } else {
+            log.warn("Received refund completed for Booking {} but status is {}. Expected REFUNDED.",
+                    bookingId, booking.getStatus());
+        }
+    }
+
     @Transactional(readOnly = true)
     public Booking getBooking(Long bookingId) {
         log.info("Admin fetching booking with ID: {}", bookingId);
@@ -410,30 +385,86 @@ public class BookingService {
         if (booking.getStatus() == BookingStatus.COMPLETED) {
             throw new BusinessException("Không thể hủy đơn hàng đã hoàn thành.");
         }
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            log.warn("Admin tried to cancel an already refunded booking: {}", bookingId);
+            return;
+        }
 
         String oldStatus = booking.getStatus().name();
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepo.save(booking);
-        log.info("Booking cancelled by ADMIN: ID={}, OldStatus={}", bookingId, oldStatus);
+        LocalDateTime now = LocalDateTime.now();
 
-        BookingCancelledEvent event = BookingCancelledEvent.builder()
-                .bookingId(bookingId)
-                .serviceId(booking.getServiceId())
-                .userId(booking.getUserId())
-                .reason("Cancelled by Administrator")
-                .previousStatus(oldStatus)
-                .checkIn(booking.getCheckInDate())
-                .checkOut(booking.getCheckOutDate())
-                .quantity(booking.getQuantity())
-                .customerEmail(booking.getCustomerEmail())
-                .serviceName(booking.getServiceName())
-                .build();
+        // Handle CONFIRMED bookings (paid) - need refund, same as user cancel
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            log.info("Admin cancelling CONFIRMED booking {}. Initiating refund process...", bookingId);
 
-        eventPublisher.saveEventToOutbox(
-                "Booking",
-                booking.getId().toString(),
-                ROUTING_KEY_CANCELLED,
-                event);
+            booking.setStatus(BookingStatus.REFUNDED);
+            booking.setCancelledAt(now);
+            booking.setCancellationReason("Cancelled by Administrator");
+            bookingRepo.save(booking);
+
+            // Trigger refund via RefundRequestedEvent
+            com.soa.common.event.RefundRequestedEvent refundEvent = com.soa.common.event.RefundRequestedEvent.builder()
+                    .bookingId(bookingId)
+                    .userId(booking.getUserId())
+                    .refundAmount(booking.getTotalPrice())
+                    .reason("Admin cancellation")
+                    .customerEmail(booking.getCustomerEmail())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    bookingId.toString(),
+                    RabbitMQConfig.ROUTING_KEY_REFUND_REQUESTED,
+                    refundEvent);
+
+            log.info("Published RefundRequestedEvent for Booking ID {}", bookingId);
+
+            // Also publish cancellation event to release inventory
+            BookingCancelledEvent inventoryEvent = BookingCancelledEvent.builder()
+                    .bookingId(bookingId)
+                    .serviceId(booking.getServiceId())
+                    .userId(booking.getUserId())
+                    .reason("Cancelled by Administrator (with refund)")
+                    .previousStatus(oldStatus)
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity())
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    booking.getId().toString(),
+                    ROUTING_KEY_CANCELLED,
+                    inventoryEvent);
+        } else {
+            // Handle other statuses (INITIATED, PENDING_PAYMENT) - no refund needed
+            booking.setStatus(BookingStatus.CANCELLED);
+            booking.setCancelledAt(now);
+            booking.setCancellationReason("Cancelled by Administrator");
+            bookingRepo.save(booking);
+            log.info("Booking cancelled by ADMIN: ID={}, OldStatus={}", bookingId, oldStatus);
+
+            BookingCancelledEvent event = BookingCancelledEvent.builder()
+                    .bookingId(bookingId)
+                    .serviceId(booking.getServiceId())
+                    .userId(booking.getUserId())
+                    .reason("Cancelled by Administrator")
+                    .previousStatus(oldStatus)
+                    .checkIn(booking.getCheckInDate())
+                    .checkOut(booking.getCheckOutDate())
+                    .quantity(booking.getQuantity())
+                    .customerEmail(booking.getCustomerEmail())
+                    .serviceName(booking.getServiceName())
+                    .build();
+
+            eventPublisher.saveEventToOutbox(
+                    "Booking",
+                    booking.getId().toString(),
+                    ROUTING_KEY_CANCELLED,
+                    event);
+        }
     }
 
     @Transactional

@@ -118,4 +118,18 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(inventoryLockSuccessfulQueue).to(bookingExchange)
                 .with(ROUTING_KEY_INVENTORY_LOCK_SUCCESSFUL);
     }
+
+    // Refund completed queue
+    public static final String QUEUE_REFUND_COMPLETED = "booking.refund.completed.queue";
+    public static final String ROUTING_KEY_REFUND_COMPLETED = "refund.completed";
+
+    @Bean
+    public Queue refundCompletedQueue() {
+        return new Queue(QUEUE_REFUND_COMPLETED, true);
+    }
+
+    @Bean
+    public Binding bindingRefundCompleted(Queue refundCompletedQueue, TopicExchange bookingExchange) {
+        return BindingBuilder.bind(refundCompletedQueue).to(bookingExchange).with(ROUTING_KEY_REFUND_COMPLETED);
+    }
 }

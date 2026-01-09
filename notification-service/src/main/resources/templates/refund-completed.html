@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Refund Completed Notification</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .amount { font-size: 24px; color: #4CAF50; font-weight: bold; }
+        .footer { text-align: center; padding: 10px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>Thông báo Hoàn tiền Thành công</h2>
+    </div>
+    <div class="content">
+        <p>Xin chào quý khách,</p>
+        <p>Chúng tôi xin thông báo rằng yêu cầu hoàn tiền cho đơn hàng <b th:text="${event.bookingId}"></b> đã được xử lý thành công.</p>
+        
+        <p><b>Số tiền hoàn:</b> <span class="amount" th:text="${#numbers.formatDecimal(event.refundAmount, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'"></span></p>
+        <p><b>Mã giao dịch hoàn tiền:</b> <span th:text="${event.refundTransactionId}"></span></p>
+        
+        <p>Số tiền hoàn sẽ được chuyển về tài khoản/thẻ thanh toán của bạn trong vòng 3-7 ngày làm việc tùy theo ngân hàng.</p>
+        
+        <p>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua email hoặc hotline.</p>
+        
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của V-TourHub!</p>
+    </div>
+    <div class="footer">
+        &copy; 2025 V-TourHub System.
+    </div>
+</div>
+</body>
+</html>

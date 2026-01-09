@@ -14,6 +14,7 @@ import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingFailedEvent;
 import com.soa.common.event.BookingReadyForPaymentEvent;
+import com.soa.common.event.RefundCompletedEvent;
 import com.v_tourhub.notification_service.entity.NotificationLog;
 import com.v_tourhub.notification_service.entity.NotificationStatus;
 import com.v_tourhub.notification_service.entity.NotificationType;
@@ -153,6 +154,37 @@ public class EmailService {
             saveLog(to, subject, htmlContent, NotificationStatus.SENT, null, event.getBookingId());
         } catch (Exception e) {
             log.error("Failed to send payment ready email", e);
+            saveLog(to, subject, htmlContent, NotificationStatus.FAILED, e.getMessage(), event.getBookingId());
+        }
+    }
+
+    public void sendRefundCompletedEmail(RefundCompletedEvent event) {
+        String to = event.getCustomerEmail();
+        if (to == null || to.isEmpty()) {
+            log.warn("No customer email in RefundCompletedEvent for booking {}", event.getBookingId());
+            return;
+        }
+
+        String subject = "V-TourHub - Thông báo hoàn tiền cho đơn hàng #" + event.getBookingId();
+
+        Context context = new Context();
+        context.setVariable("event", event);
+        String htmlContent = templateEngine.process("refund-completed", context);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            helper.setFrom("noreply@v-tourhub.com");
+
+            mailSender.send(message);
+            log.info("Refund completed email sent to {}", to);
+            saveLog(to, subject, htmlContent, NotificationStatus.SENT, null, event.getBookingId());
+        } catch (Exception e) {
+            log.error("Failed to send refund completed email", e);
             saveLog(to, subject, htmlContent, NotificationStatus.FAILED, e.getMessage(), event.getBookingId());
         }
     }

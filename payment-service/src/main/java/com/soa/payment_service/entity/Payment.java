@@ -20,6 +20,8 @@ public class Payment extends BaseEntity {
 
     private String userId;
 
+    private String customerEmail; // For refund notification
+
     @Column(nullable = false)
     private BigDecimal amount;
 

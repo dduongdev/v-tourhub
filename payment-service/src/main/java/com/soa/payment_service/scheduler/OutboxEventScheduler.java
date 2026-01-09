@@ -2,6 +2,7 @@ package com.soa.payment_service.scheduler;
 
 import com.soa.common.event.PaymentCompletedEvent;
 import com.soa.common.event.PaymentFailedEvent;
+import com.soa.common.event.RefundCompletedEvent;
 import com.soa.payment_service.entity.OutboxEvent;
 import com.soa.payment_service.repository.OutboxEventRepository;
 
@@ -53,7 +54,7 @@ public class OutboxEventScheduler {
 
                 // Gửi message (không convert)
                 rabbitTemplate.send(BOOKING_EXCHANGE, event.getEventType(), message);
-                
+
                 // Đánh dấu đã gửi
                 event.setPublished(true);
 
@@ -67,6 +68,7 @@ public class OutboxEventScheduler {
         return switch (eventType) {
             case "payment.completed" -> PaymentCompletedEvent.class.getName();
             case "payment.failed" -> PaymentFailedEvent.class.getName();
+            case "refund.completed" -> RefundCompletedEvent.class.getName();
             default -> throw new IllegalArgumentException("Unknown event type for Payment Service: " + eventType);
         };
     }

@@ -9,6 +9,7 @@ import com.soa.common.event.BookingCancelledEvent;
 import com.soa.common.event.BookingConfirmedEvent;
 import com.soa.common.event.BookingFailedEvent;
 import com.soa.common.event.BookingReadyForPaymentEvent;
+import com.soa.common.event.RefundCompletedEvent;
 import com.v_tourhub.notification_service.config.RabbitMQConfig;
 import com.v_tourhub.notification_service.service.EmailService;
 
@@ -20,9 +21,9 @@ public class NotificationEventListener {
     private final EmailService emailService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_EMAIL)
-    public void handleBookingConfirmed(BookingConfirmedEvent event) { 
+    public void handleBookingConfirmed(BookingConfirmedEvent event) {
         log.info("Received BookingConfirmedEvent: {}", event);
-        
+
         if (event.getCustomerEmail() != null && !event.getCustomerEmail().isEmpty()) {
             emailService.sendBookingConfirmation(event);
         } else {
@@ -41,7 +42,7 @@ public class NotificationEventListener {
     @RabbitListener(queues = RabbitMQConfig.QUEUE_BOOKING_FAILED_EMAIL)
     public void handleBookingFailed(BookingFailedEvent event) {
         log.info("Received booking.failed event for notification: {}", event);
-        
+
         if (event.getCustomerEmail() != null && !event.getCustomerEmail().isEmpty()) {
             emailService.sendBookingFailureEmail(event);
         } else {
@@ -53,5 +54,16 @@ public class NotificationEventListener {
     public void handleBookingReadyForPayment(BookingReadyForPaymentEvent event) {
         log.info("Received booking.ready_for_payment event for notification: {}", event);
         emailService.sendPaymentReadyEmail(event);
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_REFUND_COMPLETED_EMAIL)
+    public void handleRefundCompleted(RefundCompletedEvent event) {
+        log.info("Received refund.completed event for notification: {}", event);
+
+        if (event.getCustomerEmail() != null && !event.getCustomerEmail().isEmpty()) {
+            emailService.sendRefundCompletedEmail(event);
+        } else {
+            log.warn("No customer email in refund.completed event, skipping email sending.");
+        }
     }
 }
