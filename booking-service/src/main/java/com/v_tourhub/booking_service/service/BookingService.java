@@ -367,6 +367,27 @@ public class BookingService {
         }
     }
 
+    // =========================================================================
+    // 7. ADMIN ACTION: CONFIRM CHECK-IN (CONFIRMED → COMPLETED)
+    // =========================================================================
+    @Transactional
+    public void completeBookingByAdmin(Long bookingId) {
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new BusinessException(
+                    "Chỉ có thể xác nhận check-in cho đơn hàng đã thanh toán. Trạng thái hiện tại: "
+                            + booking.getStatus());
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED);
+        booking.setCompletedAt(LocalDateTime.now());
+        bookingRepo.save(booking);
+
+        log.info("Booking {} marked as COMPLETED by Admin.", bookingId);
+    }
+
     @Transactional(readOnly = true)
     public Booking getBooking(Long bookingId) {
         log.info("Admin fetching booking with ID: {}", bookingId);

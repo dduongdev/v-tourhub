@@ -69,10 +69,14 @@
                             <app-status-badge [status]="booking.status"></app-status-badge>
                         </td>
                         <td class="text-end pe-4">
-                            <!-- Fix layout for delete button: increase size and icon -->
-                            <button class="btn btn-outline-danger"
-                                style="width: 32px; height: 32px; padding: 0; line-height: 30px;"
-                                *ngIf="booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED'"
+                            <!-- Check-in button for CONFIRMED bookings -->
+                            <button class="btn btn-success btn-sm me-1" *ngIf="booking.status === 'CONFIRMED'"
+                                (click)="confirmCheckin(booking.bookingId)" title="Confirm Check-in">
+                                <i class="bi bi-check2-circle"></i> Check-in
+                            </button>
+                            <!-- Cancel button -->
+                            <button class="btn btn-outline-danger btn-sm"
+                                *ngIf="booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && booking.status !== 'REFUNDED'"
                                 (click)="cancelBooking(booking.bookingId)" title="Cancel Booking">
                                 <i class="bi bi-x-lg"></i>
                             </button>

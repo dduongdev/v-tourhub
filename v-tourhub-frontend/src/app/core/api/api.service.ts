@@ -236,6 +236,12 @@ export class ApiService {
             .pipe(this.unwrap());
     }
 
+    // Admin confirms check-in: PUT /bookings/{id}/complete
+    completeBooking(id: number): Observable<void> {
+        return this.http.put<ApiResponse<void>>(`${this.apiUrl}/bookings/${id}/complete`, {})
+            .pipe(this.unwrap());
+    }
+
     createVnPayUrl(bookingId: number): Observable<string> {
         return this.http.post<ApiResponse<string>>(`${this.apiUrl}/payments/vnpay/url/${bookingId}`, {})
             .pipe(this.unwrap());

@@ -86,4 +86,11 @@ public class BookingController {
         return ApiResponse.success(bookingService.getAllBookings(
                 org.springframework.data.domain.PageRequest.of(page, size, sorting)));
     }
+
+    @PutMapping("/{id}/complete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> completeBooking(@PathVariable Long id) {
+        bookingService.completeBookingByAdmin(id);
+        return ApiResponse.success(null, "Xác nhận check-in thành công.");
+    }
 }

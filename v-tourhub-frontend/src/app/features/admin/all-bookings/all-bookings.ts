@@ -87,6 +87,22 @@ export class AllBookingsComponent implements OnInit {
       });
     }
   }
+
+  confirmCheckin(id: number): void {
+    if (confirm('Xác nhận khách đã check-in? Booking sẽ chuyển sang trạng thái COMPLETED.')) {
+      this.apiService.completeBooking(id).subscribe({
+        next: () => {
+          this.notification.success('Check-in confirmed successfully!');
+          this.loadBookings();
+        },
+        error: (err) => {
+          console.error(err);
+          this.notification.error(err.error?.message || 'Failed to confirm check-in.');
+        }
+      });
+    }
+  }
+
   onPageChange(page: number) {
     this.pageNumber = page;
     this.loadBookings();

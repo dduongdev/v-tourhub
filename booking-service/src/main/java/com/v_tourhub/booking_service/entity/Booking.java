@@ -53,4 +53,5 @@ public class Booking extends BaseEntity {
     private LocalDateTime cancelledAt;
     private String cancellationReason;
     private LocalDateTime confirmedAt;
+    private LocalDateTime completedAt; // When customer checked in
 }
