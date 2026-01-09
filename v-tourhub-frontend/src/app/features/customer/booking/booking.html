@@ -1,46 +1,136 @@
-<div class="container mt-4">
-    <h1>Book Service</h1>
+<div class="container mt-4 pb-5">
+    <!-- Service Header -->
+    @if (service) {
+    <div class="page-header text-start mb-4">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <a [routerLink]="['/service', service.id]" class="text-secondary text-decoration-none small">
+                <i class="bi bi-arrow-left"></i> Back to {{ service.name }}
+            </a>
+        </div>
+        <h1 class="page-title text-start mb-2">Book: {{ service.name }}</h1>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold">{{ service.type
+                }}</span>
+            <span class="text-primary fw-bold fs-5">{{ service.price | number }} VND</span>
+        </div>
+    </div>
+    }
 
-    <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()">
-        <div class="mb-3">
-            <label class="form-label">Check-in Date</label>
-            <input type="date" class="form-control" formControlName="checkInDate" required>
+    <div class="row g-4">
+        <!-- Left Column: Booking Form -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="card-title mb-4">Booking Details</h4>
+                    <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Check-in Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" formControlName="checkInDate" required>
+                            </div>
+
+                            @if (isHotel) {
+                            <div class="col-md-6">
+                                <label class="form-label">Check-out Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" formControlName="checkOutDate" required>
+                            </div>
+                            }
+
+                            <div class="col-md-6">
+                                <label class="form-label">Number of Guests <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" formControlName="guests" min="1" required>
+                            </div>
+
+                            @if (isHotel) {
+                            <div class="col-md-6">
+                                <label class="form-label">Number of Rooms <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" formControlName="quantity" min="1" required>
+                            </div>
+                            }
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Contact Information</h5>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Your Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" formControlName="customerName" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" formControlName="customerEmail" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Phone <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" formControlName="customerPhone" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg"
+                                [disabled]="!bookingForm.valid || submitting">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {{ submitting ? 'Processing...' : 'Complete Booking' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
-        @if (isHotel) {
-        <div class="mb-3">
-            <label class="form-label">Check-out Date <span class="text-danger">*</span></label>
-            <input type="date" class="form-control" formControlName="checkOutDate" required>
-        </div>
-        }
+        <!-- Right Column: Availability Calendar -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm sticky-top" style="top: 2rem;">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">
+                        <i class="bi bi-calendar-check me-2 text-primary"></i>
+                        Availability
+                    </h5>
 
-        <div class="mb-3">
-            <label class="form-label">Number of Guests</label>
-            <input type="number" class="form-control" formControlName="guests" min="1" required>
-        </div>
+                    @if (loadingInventory) {
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <p class="text-muted small mt-2">Loading availability...</p>
+                    </div>
+                    } @else if (inventoryList.length > 0) {
+                    <div class="list-group list-group-flush">
+                        @for (inv of inventoryList; track inv.date) {
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center"
+                            [class.bg-light]="bookingForm.get('checkInDate')?.value === inv.date">
+                            <div>
+                                <div class="fw-bold">{{ inv.date | date:'mediumDate' }}</div>
+                                <div class="small" [class.text-success]="inv.availableStock > 0"
+                                    [class.text-danger]="inv.availableStock === 0">
+                                    {{ inv.availableStock > 0 ? inv.availableStock + ' spots left' : 'Sold Out' }}
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm" [class.btn-primary]="inv.availableStock > 0"
+                                [class.btn-outline-secondary]="inv.availableStock === 0"
+                                [disabled]="inv.availableStock === 0" (click)="selectDate(inv.date)">
+                                {{ bookingForm.get('checkInDate')?.value === inv.date ? 'Selected' : 'Select' }}
+                            </button>
+                        </div>
+                        }
+                    </div>
 
-        <div class="mb-3">
-            <label class="form-label">Quantity</label>
-            <input type="number" class="form-control" formControlName="quantity" min="1" required>
+                    <button class="btn btn-outline-primary w-100 mt-3" (click)="loadMore()" [disabled]="loadingMore">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        {{ loadingMore ? 'Loading...' : 'Load More Dates' }}
+                    </button>
+                    } @else {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-calendar-x display-6"></i>
+                        <p class="mt-2 small">No availability found for the next 14 days.</p>
+                        <button class="btn btn-sm btn-outline-primary" (click)="loadMore()" [disabled]="loadingMore">
+                            Check later dates
+                        </button>
+                    </div>
+                    }
+                </div>
+            </div>
         </div>
-
-        <div class="mb-3">
-            <label class="form-label">Customer Name</label>
-            <input type="text" class="form-control" formControlName="customerName" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control" formControlName="customerEmail" required>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Phone</label>
-            <input type="tel" class="form-control" formControlName="customerPhone" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary" [disabled]="!bookingForm.valid || submitting">
-            {{ submitting ? 'Booking...' : 'Complete Booking' }}
-        </button>
-    </form>
+    </div>
 </div>
